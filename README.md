@@ -58,7 +58,7 @@ You have to add python to your PATH.
 
 You can also execute [PhotovoltaicModel.py](PhotovoltaicModel.py) by double clicking on it (depending on the operating system settings), or from within your editor, if possible.
 
-In the graphical interface, change the parameters you want and press 'Calculate'.
+In the graphical interface, change the parameters you want and press 'Calculate'.  
 
 To fit experimental current-voltage characteristic, load the file and press 'Fit'.  
 The file format consists of two columns (voltage in V  and current in A) separated by tabulation:  
@@ -66,4 +66,4 @@ The file format consists of two columns (voltage in V  and current in A) separat
 0.05	-20.035e-3  
 ...  
 0.55	-1.5e-8  
-Lines beginning with a hash are ignored.
+The first two lines and lines beginning with a hash are ignored.

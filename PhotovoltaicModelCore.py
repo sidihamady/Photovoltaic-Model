@@ -8,7 +8,7 @@
 #   Université de Lorraine, France
 #   sidi.hamady@univ-lorraine.fr
 # See Copyright Notice in COPYRIGHT
-# HowTo in README.md
+# HowTo in README.md and README.pdf
 # https://github.com/sidihamady/Photovoltaic-Model
 # http://www.hamady.org/photovoltaics/PhotovoltaicModel.zip
 # ======================================================================================================
@@ -26,34 +26,34 @@
 #       PVM = PhotovoltaicModelCore(verbose = False)
 #
 #       PVM.calculate(
-#            Temperature             = 300.0,                        # Temperature in K
-#            Isc                     = 20.0e-3,                      # Short-cicruit current in A
-#            Is1                     = 1e-9,                         # Reverse saturation current in A for diode 1
-#            n1                      = 1.0,                          # Ideality factor for diode 1
-#            Is2                     = 1e-9,                         # Reverse saturation current in A for diode 2
-#            n2                      = 2.0,                          # Ideality factor for diode 2
-#            Diode2                  = True,                         # Enable/Disable diode 2
-#            Rs                      = 1.0,                          # Series resistance in Ohms
-#            Rp                      = 10000.0,                      # Parallel resistance in Ohms
-#            Vstart                  = 0.0,                          # Voltage start value in V
-#            Vend                    = 1.0,                          # Voltage end value in V
-#            InputFilename           = None,                         # current-voltage characteristic filename (e.g. containing experimental data)
-#                                                                    #   two columns (voltage in V  and current in A):
-#                                                                    #   0.00	-20.035e-3
-#                                                                    #   0.05	-20.035e-3
-#                                                                    #   ...
-#                                                                    #   0.55	-1.5e-8
-#            OutputFilename          = './PhotovoltaicModelOutput'   # OutputFilename: Output file name without extension
-#                                                                    #   (used to save figure in PDF format if in GUI mode, and the text output data).
-#                                                                    #   set to None to disable.
-#            )
+#           Temperature             = 300.0,                        # Temperature in K
+#           Isc                     = 20.0e-3,                      # Short-cicruit current in A
+#           Is1                     = 1e-9,                         # Reverse saturation current in A for diode 1
+#           n1                      = 1.0,                          # Ideality factor for diode 1
+#           Is2                     = 1e-9,                         # Reverse saturation current in A for diode 2
+#           n2                      = 2.0,                          # Ideality factor for diode 2
+#           Diode2                  = True,                         # Enable/Disable diode 2
+#           Rs                      = 1.0,                          # Series resistance in Ohms
+#           Rp                      = 10000.0,                      # Parallel resistance in Ohms
+#           Vstart                  = 0.0,                          # Voltage start value in V
+#           Vend                    = 1.0,                          # Voltage end value in V
+#           InputFilename           = None,                         # current-voltage characteristic filename (e.g. containing experimental data)
+#                                                                   #   two columns (voltage in V  and current in A):
+#                                                                   #   0.00	-20.035e-3
+#                                                                   #   0.05	-20.035e-3
+#                                                                   #   ...
+#                                                                   #   0.55	-1.5e-8
+#           Fit                     = False,                        # Fit the current-voltage characteristic contained in InputFilename
+#           OutputFilename          = './PhotovoltaicModelOutput'   # OutputFilename: Output file name without extension
+#                                                                   #   (used to save figure in PDF format if in GUI mode, and the text output data).
+#                                                                   #   set to None to disable.
+#           )
 #
 
 # import as usual
 import math
 import numpy as np
 import scipy as sp
-from scipy import stats
 import scipy.optimize as spo
 import distutils.version as dver
 import sys, os, time
@@ -120,7 +120,7 @@ except Exception as excT:
     pass
 # end try
 
-# suppress a nonrelevant warning from matplotlib
+# suppress a nonrelevant warning from matplotlib and scipy
 import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
 warnings.simplefilter(action='ignore', category=RuntimeWarning)
@@ -157,6 +157,7 @@ class PhotovoltaicModelCore(object):
         # ...
         # 0.55	-1.5e-8
         self.InputFilename      = None
+        self.ModifTime          = 0
         # the used data delimiter (usually TAB) in the I-V ASCII file
         self.DataDelimiter      = '\t'
         # number of rows to skip from the file (by default the first two rows are skipped)
@@ -239,6 +240,7 @@ class PhotovoltaicModelCore(object):
         Vstart                      = 0.0,
         Vend                        = 1.0,
         InputFilename               = None,
+        Fit                         = False,
         OutputFilename              = './PhotovoltaicModelOutput'):
         """ the PhotovoltaicModel main function """
 
@@ -247,8 +249,8 @@ class PhotovoltaicModelCore(object):
             print(TkRet)
         # end if
 
-        # Temperature: in Kelvin (from 100 K to 700 K)
-        self.Temperature    = Temperature   if ((Temperature >= 100.0)  and (Temperature <= 700.0))     else 300.0
+        # Temperature: in Kelvin (from 100 K to 500 K)
+        self.Temperature    = Temperature   if ((Temperature >= 100.0)  and (Temperature <= 500.0))     else 300.0
         self.VT             = self.VT300 * self.Temperature / 300.0     # in V
 
         # Short-cicruit current in A
@@ -286,17 +288,38 @@ class PhotovoltaicModelCore(object):
             self.OutputFilename     = self.OutputFilename + '.pdf'
         # end if
 
+        # current-voltage characteristic filename (e.g. containing experimental data)
+        # two columns (voltage in V  and current in A):
+        # 0.00	-20.035e-3
+        # 0.05	-20.035e-3
+        # ...
+        # 0.55	-1.5e-8
+        self.InputFilename = InputFilename
+        self.ModifTime     = self.getModifTime(self.InputFilename)
+
+        Fit = False     # Fit the current-voltage characteristic contained in InputFilename
+
         if TkFound:
             # GUI mode: calculation done in a working thread
-            self.startGUI()
+            self.startGUI(Fit = Fit)
         else:
             # command-line mode
-            self.start()
+            self.start(Fit = Fit)
         # end if
 
         return
 
     # end calculate
+
+    def getModifTime(self, InputFilename):
+        mt = 0
+        try:
+            mt = os.stat(InputFilename).st_mtime
+        except:
+            pass
+        # end try
+        return mt
+    # end getModifTime
 
     def isRunning(self):
         if (self.thread is None):
@@ -323,7 +346,7 @@ class PhotovoltaicModelCore(object):
     # end setRunning
 
     # init the Tkinter GUI
-    def startGUI(self):
+    def startGUI(self, Fit = False):
 
         if self.GUIstarted or (not TkFound):
             return
@@ -546,7 +569,7 @@ class PhotovoltaicModelCore(object):
 
             self.GUIstarted = True
 
-            self.start()
+            self.start(Fit = Fit)
 
             self.root.mainloop()
 
@@ -564,7 +587,7 @@ class PhotovoltaicModelCore(object):
 
     def isIncSorted(self, arr):
         for ii in range(arr.size - 1):
-            if arr[ii + 1] <= arr[ii] :
+            if arr[ii + 1] <= arr[ii]:
                 return False
             # end if
         # end for
@@ -574,37 +597,42 @@ class PhotovoltaicModelCore(object):
     # load the I-V characteristic file
     def loadFile(self):
 
-        try:
-            self.btnFit.configure(state="disabled")
-            strT = self.InputFilenameEdit.get().strip("\r\n\t")
-            if os.path.isfile(strT):
-                if (self.InputFilename != strT):
-                    self.InputFilename = strT
-                    self.FileLoaded = False
+        if not self.GUIstarted:
+            self.FileLoaded = False
+        else:
+            try:
+                strT = self.InputFilenameEdit.get().strip("\r\n\t")
+                if os.path.isfile(strT):
+                    if (self.InputFilename != strT):
+                        self.InputFilename  = strT
+                        self.FileLoaded     = False
+                    else:
+                        modifTime = self.getModifTime(strT)
+                        if (modifTime > self.ModifTime):
+                            self.FileLoaded = False
+                        # end if
+                    # end if
+                else:
+                    self.InputFilenameEdit.delete(0, Tk.END)
+                    self.InputFilenameEdit.insert(0, self.InputFilename if (self.InputFilename is not None) else "")
                 # end if
-            else:
-                self.InputFilenameEdit.delete(0, Tk.END)
-                self.InputFilenameEdit.insert(0, self.InputFilename if (self.InputFilename is not None) else "")
-                return False
-            # end if
-        except Exception as excT:
-            return False
-            # never reached
-            pass
-        # end try
+            except Exception as excT:
+                pass
+            # end try
+        # endif
 
         if (self.InputFilename is None) or (not os.path.isfile(self.InputFilename)):
             return False
         # end if
 
         if self.FileLoaded:
-            self.btnFit.configure(state="normal")
             return True
         # end if
 
         try:
 
-            self.PVpoints =  0
+            self.PVpoints  = 0
+            self.ModifTime = self.getModifTime(self.InputFilename)
 
             # load the current-voltage characteristic from file (e.g. containing experimental data)
             IVXData                 = np.loadtxt(self.InputFilename, delimiter=self.DataDelimiter, skiprows=self.SkipRows, usecols=(0,1))
@@ -655,20 +683,28 @@ class PhotovoltaicModelCore(object):
                 raise Exception('invalid voltage/current data: no photovoltaic quadrant identified')
             # end if
             ii = 0
-            for aV, aI in zip(self.VoltageX, self.CurrentX):
+            aVX             = np.copy(self.VoltageX)
+            aIX             = np.copy(self.CurrentX)
+            self.VoltageX   = np.array([])
+            self.CurrentX   = np.array([])
+
+            # keep only the photovoltaic part of the current-voltage characteristic
+            # and convert to the fourth quadrant (V > 0 and I < 0) if necessary
+
+            for aV, aI in zip(aVX, aIX):
 
                 if (nQindex != 4):
-                    # always use the solar cell current-voltage in quadant 4: V > 0 and I < 0
+                    # always use the solar cell current-voltage characteristic in the fourth quadant 4 (V > 0 and I < 0)
                     if      (nQindex == 1):
-                        aI = -aI
+                        aI  = -aI
                     elif    (nQindex == 2):
-                        aI = -aI
-                        aV = -aV
+                        aI  = -aI
+                        aV  = -aV
                     elif    (nQindex == 3):
-                        aV = -aV
+                        aV  = -aV
                     # end if
-                    self.CurrentX[ii] = aI
-                    self.VoltageX[ii] = aV
+                    aVX[ii] = aV
+                    aIX[ii] = aI
                 # end if
 
                 if (aIprev is not None) and (aI >= 0.0) and (aIprev <= 0.0):
@@ -677,8 +713,10 @@ class PhotovoltaicModelCore(object):
                 if (aVprev is not None) and (aV >= 0.0) and (aVprev <= 0.0):
                     self.ISCX       = aI
                 # end if
-                if (aI < 0.0) and (aV > 0.0):
+                if (aI <= 0.0) and (aV >= 0.0):
                     countPV += 1
+                    self.VoltageX   = np.append(self.VoltageX, aV)
+                    self.CurrentX   = np.append(self.CurrentX, aI)
                 # end if
                 if (aI < 0.0) and (aV > 0.0) and (math.fabs(aI * aV) > aPm):
                     aPm             = math.fabs(aI * aV)
@@ -688,11 +726,13 @@ class PhotovoltaicModelCore(object):
                 aVprev = aV
                 aIprev = aI
                 ii    += 1
+
             # end for
 
             if (countPV < (nPoints / 5)) or (countPV < 20):
                 raise Exception('invalid voltage/current: insufficient number of photovoltaic points (%d)' % countPV)
             # end if
+            nPoints = len(self.VoltageX)
 
             if self.verbose and (nQindex != 4):
                 print('\ncurrent-voltage characteristic converted from quadrant %d to quadrant 4' % nQindex)
@@ -728,7 +768,7 @@ class PhotovoltaicModelCore(object):
                         Vend    = VendC
                         break
                      # end if
-                # end if
+                # end for
             # end if
             self.Vstart         = Vstart
             self.Vend           = Vend
@@ -747,9 +787,6 @@ class PhotovoltaicModelCore(object):
 
             self.datax[1]       = self.VoltageX
             self.datay[1]       = self.CurrentX
-            self.updatePlot()
-
-            self.btnFit.configure(state="normal")
 
             return True
 
@@ -785,7 +822,7 @@ class PhotovoltaicModelCore(object):
         for aV in aVoltage:
             (aI, aIZ)   = self.calculateCurrent(aV)
             aCurrent    = np.append(aCurrent, aI)
-        # end if
+        # end for
         return aCurrent
     # end FitFunc
 
@@ -850,7 +887,7 @@ class PhotovoltaicModelCore(object):
                         self.Vend = aV + Vstep
                         break
                      # end if
-                # end if
+                # end for
             # end if
             #
 
@@ -869,6 +906,7 @@ class PhotovoltaicModelCore(object):
             self.VoltageY       = np.array([])
             self.CurrentY       = np.array([])
             countPV             = 0
+
             for aV in aVoltage:
                 (aI, aIZ) = self.calculateCurrent(aV)
                 if (aI <= 0.0) and (aV >= 0.0):
@@ -897,8 +935,8 @@ class PhotovoltaicModelCore(object):
                 # end if
                 aVprev = aV
                 aIprev = aI
-                self.Counter += 1
             # end for
+
             if (countPV < 50) and (math.fabs(self.VOCY) > 0.0) and (math.fabs(self.ISCY) > 0.0):
                 # recalculate with more points
                 Vstep = math.fabs(self.VOCY) / float(self.nPoints)
@@ -922,15 +960,6 @@ class PhotovoltaicModelCore(object):
                     # should never happen
                     self.FFY = 0.0
                 # end if
-            # end if
-
-            strReport = "Isc = %.4g A ; Voc = %.4g V ; FF = %.4g %%" % (self.ISCY, self.VOCY, 100.0 * self.FFY)
-            if self.GUIstarted and (self.report is not None):
-                self.report.set_color('green')
-                self.report.set_text(strReport)
-            # end if
-            if self.verbose:
-                print("\n" + strReport)
             # end if
 
             return True
@@ -999,6 +1028,8 @@ class PhotovoltaicModelCore(object):
             return False
         # end if
 
+        self.loadFile()
+
         if self.GUIstarted:
 
             if self.report is not None:
@@ -1060,7 +1091,7 @@ class PhotovoltaicModelCore(object):
                 self.setRunning(running = False)
                 self.doSave(self.OutputFilename)
                 if self.verbose:
-                    treport = ("ISC = %.3g A ; VOC = %.3f V ; FF = %.3g %%" % (self.ISC, self.VOC, 100.0 * self.FF))
+                    treport = ("ISC = %.4g A ; VOC = %.4f V ; FF = %.4g %%" % (self.ISC, self.VOC, 100.0 * self.FF))
                     print("\n----------------------------------------------------------------------\n" + treport + "\n----------------------------------------------------------------------\n")
                 # end if
             # end if
@@ -1075,8 +1106,6 @@ class PhotovoltaicModelCore(object):
             if self.verbose:
                 print("\ncalculating...")
             # end if
-
-            self.Counter = 0
 
             # to determine the calculation duration
             ticT = time.time()
@@ -1128,8 +1157,6 @@ class PhotovoltaicModelCore(object):
                 print("\nfitting...")
             # end if
 
-            # load the current-voltage characteristic
-            self.loadFile()
             if not self.FileLoaded:
                 if self.verbose:
                     print("\ndone.")
@@ -1138,8 +1165,6 @@ class PhotovoltaicModelCore(object):
             # end if
             self.datax[1] = self.VoltageX
             self.datay[1] = self.CurrentX
-
-            self.Counter = 0
 
             # to determine the calculation duration
             ticT = time.time()
@@ -1239,6 +1264,7 @@ class PhotovoltaicModelCore(object):
         try:
  
             if not self.PlotInitialized:
+
                 aLabel = ["Calculated", None]
                 for idc in range(0, self.curvecount):
                     self.line[idc], = self.plot[0].plot(np.array([]), np.array([]), self.linestyle[idc], label=aLabel[idc], linewidth=self.linesize[idc], zorder=4)
@@ -1261,9 +1287,10 @@ class PhotovoltaicModelCore(object):
                 self.plot[0].legend(numpoints=1, fontsize='small', loc='best')
 
                 self.report = self.plot[0].text(0.5, 1.05, ' ', color='red', horizontalalignment='center', verticalalignment='center', transform = self.plot[0].transAxes)
-            # end if
 
-            self.PlotInitialized = True
+                self.PlotInitialized = True
+
+            # end if
 
             for idc in range(0, self.curvecount):
                 self.line[idc].set_xdata(self.datax[idc] if (self.datax[idc] is not None) else np.array([]))
@@ -1277,6 +1304,16 @@ class PhotovoltaicModelCore(object):
                 self.plot[idp].relim()
                 self.plot[idp].autoscale()
             # end for
+
+
+            strReport = "Isc = %.4g A ; Voc = %.4g V ; FF = %.4g %%" % (self.ISCY, self.VOCY, 100.0 * self.FFY)
+            if (self.report is not None):
+                self.report.set_color('green')
+                self.report.set_text(strReport)
+            # end if
+            if self.verbose:
+                print("\n" + strReport)
+            # end if
 
             self.setFocus()
             self.canvas.draw()
@@ -1299,6 +1336,8 @@ class PhotovoltaicModelCore(object):
                 self.RpEdit.delete (0, Tk.END)
                 self.RpEdit.insert (0, "%.4g" % self.Rp)
             # end if
+
+            self.btnFit.configure(state="normal" if self.FileLoaded else "disabled")
 
         except Exception as excT:
 
@@ -1363,8 +1402,10 @@ class PhotovoltaicModelCore(object):
             try:
                 self.InputFilenameEdit.delete(0, Tk.END)
                 self.InputFilenameEdit.insert(0, inputFilename)
+                self.ModifTime  = self.getModifTime(inputFilename)
                 self.FileLoaded = False
                 self.loadFile()
+                self.updatePlot()
             except:
                 pass
             # end try
@@ -1416,7 +1457,7 @@ class PhotovoltaicModelCore(object):
             fileIV = strF + '_IV.txt'          # current-voltage characteristic
             np.savetxt(fileIV, np.c_[self.VoltageY, -self.CurrentY],
                 fmt='%.6f\t%.8g', delimiter=self.DataDelimiter, newline='\n',
-                header=("Current-voltage characteristic for:\n  ISC = %.3g ; VOC = %.3g ; FF = %.3g %%; \n  Is1 = %.3g A ; n1 = %.3g ; Is2 = %.3g A ; n2 = %.3g ; \n  RS = %.3g Ohms ; RP = %.3g Ohms\n" % (self.ISCY, self.VOCY, 100.0 * self.FFY, self.Is1, self.n1, self.Is2, self.n2, self.Rs, self.Rp))
+                header=("Current-voltage characteristic for:\n  ISC = %.4g ; VOC = %.4g ; FF = %.4g %%; \n  Is1 = %.4g A ; n1 = %.4g ; Is2 = %.4g A ; n2 = %.4g ; \n  RS = %.4g Ohms ; RP = %.4g Ohms\n" % (self.ISCY, self.VOCY, 100.0 * self.FFY, self.Is1, self.n1, self.Is2, self.n2, self.Rs, self.Rp))
                 )
 
         except Exception as excT:

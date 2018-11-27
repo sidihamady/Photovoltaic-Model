@@ -8,7 +8,7 @@
 #   Université de Lorraine, France
 #   sidi.hamady@univ-lorraine.fr
 # See Copyright Notice in COPYRIGHT
-# HowTo in README.md
+# HowTo in README.md and README.pdf
 # https://github.com/sidihamady/Photovoltaic-Model
 # http://www.hamady.org/photovoltaics/PhotovoltaicModel.zip
 # ======================================================================================================
@@ -44,6 +44,7 @@ PVM.calculate(
                                                             #   0.05	-20.035e-3
                                                             #   ...
                                                             #   0.55	-1.5e-8
+    Fit                     = False,                        # Fit the current-voltage characteristic contained in InputFilename
     OutputFilename          = './PhotovoltaicModelOutput'   # OutputFilename: Output file name without extension
                                                             #   (used to save figure in PDF format if in GUI mode, and the text output data).
                                                             #   set to None to disable.
