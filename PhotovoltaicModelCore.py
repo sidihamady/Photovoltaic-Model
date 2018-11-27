@@ -696,7 +696,7 @@ class PhotovoltaicModelCore(object):
             for aV, aI in zip(aVX, aIX):
 
                 if (nQindex != 4):
-                    # always use the solar cell current-voltage characteristic in the fourth quadant 4 (V > 0 and I < 0)
+                    # always use the solar cell current-voltage characteristic in the fourth quadrant 4 (V > 0 and I < 0)
                     if      (nQindex == 1):
                         aI  = -aI
                     elif    (nQindex == 2):
@@ -961,7 +961,7 @@ class PhotovoltaicModelCore(object):
                 self.FFY = math.fabs((self.VmY * self.ImY) / (self.VOCY * self.ISCY))
                 if (self.FFY > 1.0):
                     # should never happen
-                    self.FFY = float('nan')
+                    self.FFY = 0.0
                 # end if
             # end if
 
