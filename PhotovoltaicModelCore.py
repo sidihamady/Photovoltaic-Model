@@ -215,7 +215,7 @@ class PhotovoltaicModelCore(object):
 
         self.tic                = 0.0
 
-        self.nPoints            = 200
+        self.nPoints            = 100
 
         # one can set verbose to False to disable printing output
         self.verbose            = verbose
@@ -223,25 +223,27 @@ class PhotovoltaicModelCore(object):
             print("\nverbose set to False: printing output disabled")
         # end if
 
+        self.reportMessage      = None
+
         return
 
     # end __init__
 
     def calculate(self, 
-        Temperature                 = 300.0,
-        Isc                         = 20.0e-3,
-        Is1                         = 1e-9,
-        n1                          = 1.0,
-        Is2                         = 1e-9,
-        n2                          = 2.0,
-        Diode2                      = True,
-        Rs                          = 10.0,
-        Rp                          = 10000.0,
-        Vstart                      = 0.0,
-        Vend                        = 1.0,
-        InputFilename               = None,
-        Fit                         = False,
-        OutputFilename              = './PhotovoltaicModelOutput'):
+        Temperature             = 300.0,
+        Isc                     = 20.0e-3,
+        Is1                     = 1e-9,
+        n1                      = 1.0,
+        Is2                     = 1e-9,
+        n2                      = 2.0,
+        Diode2                  = True,
+        Rs                      = 10.0,
+        Rp                      = 10000.0,
+        Vstart                  = 0.0,
+        Vend                    = 1.0,
+        InputFilename           = None,
+        Fit                     = False,
+        OutputFilename          = './PhotovoltaicModelOutput'):
         """ the PhotovoltaicModel main function """
 
         if not TkFound:
@@ -774,20 +776,22 @@ class PhotovoltaicModelCore(object):
             self.Vend           = Vend
             self.VoltageY       = np.arange(Vstart, Vend + Vstep, Vstep)
             self.CurrentY       = None
-            self.FileLoaded     = True
 
-            strReport = "Isc = %.4g A ; Voc = %.4g V ; FF = %.4g %%" % (self.ISCX, self.VOCX, 100.0 * self.FFX)
-            if self.GUIstarted and (self.report is not None):
-                self.report.set_color('green')
-                self.report.set_text(strReport)
+            if (self.ISCX > 0.0) and (self.VOCX > 0.0) and (self.FFX > 0.0):
+                self.reportMessage = "Isc = %.4g A ; Voc = %.4g V ; FF = %.4g %%" % (self.ISCX, self.VOCX, 100.0 * self.FFX)
+            else:
+                self.reportMessage = "! The photovoltaic parameters cannot be extracted"
             # end if
             if self.verbose:
-                print("\n" + strReport)
+                print("\n" + self.reportMessage)
             # end if
 
-            self.datax[1]       = self.VoltageX
-            self.datay[1]       = self.CurrentX
+            if TkFound:
+                self.datax[1]   = self.VoltageX
+                self.datay[1]   = self.CurrentX
+            # end if
 
+            self.FileLoaded     = True
             return True
 
         except Exception as excT:
@@ -796,13 +800,12 @@ class PhotovoltaicModelCore(object):
             excType, excObj, excTb = sys.exc_info()
             excFile = os.path.split(excTb.tb_frame.f_code.co_filename)[1]
             strErr  = "\n! cannot load the current-voltage characteristic:\n  %s\n  in %s (line %d)\n" % (str(excT), excFile, excTb.tb_lineno)
-            if self.GUIstarted and (self.report is not None):
-                self.report.set_color('red')
-                self.report.set_text('cannot load the current-voltage characteristic')
-            # end if
+            self.reportMessage = '! cannot load the current-voltage characteristic'
             if self.verbose:
                 print(strErr)
             # end if
+            return False
+            # never reached
             pass
         # end try
 
@@ -958,8 +961,17 @@ class PhotovoltaicModelCore(object):
                 self.FFY = math.fabs((self.VmY * self.ImY) / (self.VOCY * self.ISCY))
                 if (self.FFY > 1.0):
                     # should never happen
-                    self.FFY = 0.0
+                    self.FFY = float('nan')
                 # end if
+            # end if
+
+            if (self.ISCY > 0.0) and (self.VOCY > 0.0) and (self.FFY > 0.0):
+                self.reportMessage = "Isc = %.4g A ; Voc = %.4g V ; FF = %.4g %%" % (self.ISCY, self.VOCY, 100.0 * self.FFY)
+            else:
+                self.reportMessage = "! The photovoltaic parameters cannot be calculated"
+            # end if
+            if self.verbose:
+                print("\n" + self.reportMessage)
             # end if
 
             return True
@@ -969,10 +981,7 @@ class PhotovoltaicModelCore(object):
             excType, excObj, excTb = sys.exc_info()
             excFile = os.path.split(excTb.tb_frame.f_code.co_filename)[1]
             strErr  = "\n! cannot calculate the current-voltage characteristic:\n  %s\n  in %s (line %d)\n" % (str(excT), excFile, excTb.tb_lineno)
-            if self.GUIstarted and (self.report is not None):
-                self.report.set_color('red')
-                self.report.set_text('cannot calculate the current-voltage characteristic')
-            # end if
+            self.reportMessage = '! cannot calculate the current-voltage characteristic'
             if self.verbose:
                 print(strErr)
             # end if
@@ -1028,6 +1037,8 @@ class PhotovoltaicModelCore(object):
             return False
         # end if
 
+        self.reportMessage = None
+
         self.loadFile()
 
         if self.GUIstarted:
@@ -1076,7 +1087,6 @@ class PhotovoltaicModelCore(object):
 
         else:
             # GUI initialization step
-
             if TkFound:
                 self.actionbutton = self.btnFit if Fit else self.btnCalculate
                 self.actionbuttonText = "Fit" if Fit else "Calculate"
@@ -1090,10 +1100,6 @@ class PhotovoltaicModelCore(object):
                 self.run()
                 self.setRunning(running = False)
                 self.doSave(self.OutputFilename)
-                if self.verbose:
-                    treport = ("ISC = %.4g A ; VOC = %.4f V ; FF = %.4g %%" % (self.ISC, self.VOC, 100.0 * self.FF))
-                    print("\n----------------------------------------------------------------------\n" + treport + "\n----------------------------------------------------------------------\n")
-                # end if
             # end if
         # end if
 
@@ -1119,8 +1125,10 @@ class PhotovoltaicModelCore(object):
                 return False
             # endif
 
-            self.datax[0] = self.VoltageY
-            self.datay[0] = self.CurrentY
+            if TkFound:
+                self.datax[0] = self.VoltageY
+                self.datay[0] = self.CurrentY
+            # endif
 
             self.tic = float(time.time() - ticT)
 
@@ -1135,10 +1143,7 @@ class PhotovoltaicModelCore(object):
             excType, excObj, excTb = sys.exc_info()
             excFile = os.path.split(excTb.tb_frame.f_code.co_filename)[1]
             strErr  = "\n! cannot calculate the current-voltage characteristic:\n  %s\n  in %s (line %d)\n" % (str(excT), excFile, excTb.tb_lineno)
-            if self.GUIstarted and (self.report is not None):
-                self.report.set_color('red')
-                self.report.set_text('cannot calculate the current-voltage characteristic')
-            # end if
+            self.reportMessage = '! cannot calculate the current-voltage characteristic'
             if self.verbose:
                 print(strErr)
             # end if
@@ -1163,11 +1168,16 @@ class PhotovoltaicModelCore(object):
                 # end if
                 return False
             # end if
-            self.datax[1] = self.VoltageX
-            self.datay[1] = self.CurrentX
+
+            if TkFound:
+                self.datax[1] = self.VoltageX
+                self.datay[1] = self.CurrentX
+            # end if
 
             # to determine the calculation duration
             ticT = time.time()
+
+            bRet = False
 
             try:
                 if dver.StrictVersion(sp.__version__) >= dver.StrictVersion("0.19.1"):
@@ -1203,17 +1213,18 @@ class PhotovoltaicModelCore(object):
                     # end if
                     return False
                 # endif
-                self.datax[0] = self.VoltageY
-                self.datay[0] = self.CurrentY
+
+                if TkFound:
+                    self.datax[0] = self.VoltageY
+                    self.datay[0] = self.CurrentY
+                # endif
 
             except Exception as excT:
-                if self.GUIstarted and (self.report is not None):
-                    self.report.set_color('red')
-                    self.report.set_text('fitting error' + str(excT))
-                # end if
+                self.reportMessage = '! fitting error: ' + str(excT)
                 if self.verbose:
-                    print("\nfit error: " + str(excT))
+                    print("\nfitting error: " + str(excT))
                 # end if
+                bRet = False
                 pass
             # end try
 
@@ -1223,17 +1234,14 @@ class PhotovoltaicModelCore(object):
                 print("\ndone. elapsed time = %.6f sec." % self.tic)
             # end if
 
-            return True
+            return bRet
 
         except Exception as excT:
 
             excType, excObj, excTb = sys.exc_info()
             excFile = os.path.split(excTb.tb_frame.f_code.co_filename)[1]
             strErr  = "\n! cannot fit the current-voltage characteristic:\n  %s\n  in %s (line %d)\n" % (str(excT), excFile, excTb.tb_lineno)
-            if self.GUIstarted and (self.report is not None):
-                self.report.set_color('red')
-                self.report.set_text('cannot fit the current-voltage characteristic')
-            # end if
+            self.reportMessage = '! cannot fit the current-voltage characteristic'
             if self.verbose:
                 print(strErr)
             # end if
@@ -1286,7 +1294,12 @@ class PhotovoltaicModelCore(object):
 
                 self.plot[0].legend(numpoints=1, fontsize='small', loc='best')
 
-                self.report = self.plot[0].text(0.5, 1.05, ' ', color='red', horizontalalignment='center', verticalalignment='center', transform = self.plot[0].transAxes)
+                afont = FontProperties()
+                tfont = afont.copy()
+                tfont.set_style('normal')
+                tfont.set_weight('bold')
+                tfont.set_size('small')
+                self.report = self.plot[0].text(0.5, 1.05, ' ', color='red', horizontalalignment='center', verticalalignment='center', fontproperties=tfont, transform = self.plot[0].transAxes)
 
                 self.PlotInitialized = True
 
@@ -1305,14 +1318,9 @@ class PhotovoltaicModelCore(object):
                 self.plot[idp].autoscale()
             # end for
 
-
-            strReport = "Isc = %.4g A ; Voc = %.4g V ; FF = %.4g %%" % (self.ISCY, self.VOCY, 100.0 * self.FFY)
-            if (self.report is not None):
-                self.report.set_color('green')
-                self.report.set_text(strReport)
-            # end if
-            if self.verbose:
-                print("\n" + strReport)
+            if (self.reportMessage is not None):
+                self.report.set_color('red' if self.reportMessage.startswith('!') else 'green')
+                self.report.set_text(self.reportMessage)
             # end if
 
             self.setFocus()
@@ -1455,18 +1463,15 @@ class PhotovoltaicModelCore(object):
             # save output data in text format
             strF = os.path.splitext(strFilename)[0]
             fileIV = strF + '_IV.txt'          # current-voltage characteristic
-            np.savetxt(fileIV, np.c_[self.VoltageY, -self.CurrentY],
+            np.savetxt(fileIV, np.c_[self.VoltageY, self.CurrentY],
                 fmt='%.6f\t%.8g', delimiter=self.DataDelimiter, newline='\n',
-                header=("Current-voltage characteristic for:\n  ISC = %.4g ; VOC = %.4g ; FF = %.4g %%; \n  Is1 = %.4g A ; n1 = %.4g ; Is2 = %.4g A ; n2 = %.4g ; \n  RS = %.4g Ohms ; RP = %.4g Ohms\n" % (self.ISCY, self.VOCY, 100.0 * self.FFY, self.Is1, self.n1, self.Is2, self.n2, self.Rs, self.Rp))
+                header=("Current-voltage characteristic for:\n  ISC = %.4g A ; VOC = %.4g V ; FF = %.4g %% ; \n  Is1 = %.4g A ; n1 = %.4g ; Is2 = %.4g A ; n2 = %.4g ; \n  RS = %.4g Ohms ; RP = %.4g Ohms\n" % (self.ISCY, self.VOCY, 100.0 * self.FFY, self.Is1, self.n1, self.Is2, self.n2, self.Rs, self.Rp))
                 )
 
         except Exception as excT:
 
             strErr = "\n! cannot save output data:\n  %s\n" % str(excT)
-            if self.GUIstarted and (self.report is not None):
-                self.report.set_color('red')
-                self.report.set_text('cannot save output data')
-            # end if
+            self.reportMessage = '! cannot save output data'
             if self.verbose:
                 print(strErr)
             # end if
