@@ -28,9 +28,9 @@ PVM = PhotovoltaicModelCore(verbose = False)
 
 PVM.calculate(
     Temperature             = 300.0,                        # Temperature in K
-    Isc                     = 20.0e-3,                      # Short-cicruit current in A
+    Isc                     = 35.0e-3,                      # Short-cicruit current in A
     Is1                     = 1e-9,                         # Reverse saturation current in A for diode 1
-    n1                      = 1.0,                          # Ideality factor for diode 1
+    n1                      = 1.5,                          # Ideality factor for diode 1
     Is2                     = 1e-9,                         # Reverse saturation current in A for diode 2
     n2                      = 2.0,                          # Ideality factor for diode 2
     Diode2                  = True,                         # Enable/Disable diode 2
@@ -45,7 +45,7 @@ PVM.calculate(
                                                             #   ...
                                                             #   0.55	-1.5e-8
     Fit                     = False,                        # Fit the current-voltage characteristic contained in InputFilename
-    OutputFilename          = './PhotovoltaicModelOutput'   # OutputFilename: Output file name without extension
+    OutputFilename          = './PhotovoltaicModelOutput'   # Output file name without extension
                                                             #   (used to save figure in PDF format if in GUI mode, and the text output data).
                                                             #   set to None to disable.
     )

@@ -27,9 +27,9 @@
 #
 #       PVM.calculate(
 #           Temperature             = 300.0,                        # Temperature in K
-#           Isc                     = 20.0e-3,                      # Short-cicruit current in A
+#           Isc                     = 35.0e-3,                      # Short-cicruit current in A
 #           Is1                     = 1e-9,                         # Reverse saturation current in A for diode 1
-#           n1                      = 1.0,                          # Ideality factor for diode 1
+#           n1                      = 1.5,                          # Ideality factor for diode 1
 #           Is2                     = 1e-9,                         # Reverse saturation current in A for diode 2
 #           n2                      = 2.0,                          # Ideality factor for diode 2
 #           Diode2                  = True,                         # Enable/Disable diode 2
@@ -44,7 +44,7 @@
 #                                                                   #   ...
 #                                                                   #   0.55	-1.5e-8
 #           Fit                     = False,                        # Fit the current-voltage characteristic contained in InputFilename
-#           OutputFilename          = './PhotovoltaicModelOutput'   # OutputFilename: Output file name without extension
+#           OutputFilename          = './PhotovoltaicModelOutput'   # Output file name without extension
 #                                                                   #   (used to save figure in PDF format if in GUI mode, and the text output data).
 #                                                                   #   set to None to disable.
 #           )
@@ -165,9 +165,9 @@ class PhotovoltaicModelCore(object):
 
         self.Temperature        = 300.0                 # in K
         self.VT                 = self.VT300 * self.Temperature / 300.0
-        self.Isc                = 20.0e-3               # Short-cicruit current in A
+        self.Isc                = 35.0e-3               # Short-cicruit current in A
         self.Is1                = 1e-9                  # Reverse saturation current in A for diode 1
-        self.n1                 = 1.0                   # Ideality factor for diode 1
+        self.n1                 = 1.5                   # Ideality factor for diode 1
         self.Is2                = 1e-9                  # Reverse saturation current in A for diode 2
         self.n2                 = 2.0                   # Ideality factor for diode 2
         self.Diode2             = True                  # Enable/Disable diode 2
@@ -215,7 +215,10 @@ class PhotovoltaicModelCore(object):
 
         self.tic                = 0.0
 
-        self.nPoints            = 100
+        self.nPointsMin         =   20
+        self.nPoints            =  100
+        self.nPointsDef         =  100
+        self.nPointsMax         = 1000
 
         # one can set verbose to False to disable printing output
         self.verbose            = verbose
@@ -231,9 +234,9 @@ class PhotovoltaicModelCore(object):
 
     def calculate(self, 
         Temperature             = 300.0,
-        Isc                     = 20.0e-3,
+        Isc                     = 35.0e-3,
         Is1                     = 1e-9,
-        n1                      = 1.0,
+        n1                      = 1.5,
         Is2                     = 1e-9,
         n2                      = 2.0,
         Diode2                  = True,
@@ -283,7 +286,7 @@ class PhotovoltaicModelCore(object):
         # Voltage end value in V
         self.Vend           = Vend          if ((Vend   >= 0.0)         and (Vend   <= 10.0))           else 0.0
 
-        # OutputFilename: Output file name without extension (used to save figure in PDF format if in GUI mode, and the text output data).
+        # Output file name without extension (used to save figure in PDF format if in GUI mode, and the text output data).
         #   set to None to disable.
         self.OutputFilename         = OutputFilename
         if self.OutputFilename and (not self.OutputFilename.endswith('.pdf')):
@@ -375,8 +378,8 @@ class PhotovoltaicModelCore(object):
 
             self.plot       = {}
             self.plot[0]    = self.figure.add_subplot(111)
-            self.plot[0].set_xlim( 0.0,     1.0)
-            self.plot[0].set_ylim(-0.1,     0.0)
+            self.plot[0].set_xlim( 0.0,     0.7)
+            self.plot[0].set_ylim(-0.035,   0.005)
 
             self.line0a     = None
             self.line0b     = None
@@ -557,6 +560,7 @@ class PhotovoltaicModelCore(object):
             # end if
 
             self.popmenu = Tk.Menu(self.root, tearoff=0)
+            self.popmenu.add_command(label="Fit", command=self.onFit)
             self.popmenu.add_command(label="Calculate", command=self.onStart)
             self.popmenu.add_separator()
             self.popmenu.add_command(label="Auto scale", command=self.onAutoScale)
@@ -731,8 +735,8 @@ class PhotovoltaicModelCore(object):
 
             # end for
 
-            if (countPV < (nPoints / 5)) or (countPV < 20):
-                raise Exception('invalid voltage/current: insufficient number of photovoltaic points (%d)' % countPV)
+            if (countPV < (nPoints / 5)) or (countPV < self.nPointsMin):
+                raise Exception('invalid voltage/current: insufficient number of photovoltaic points (%d): should be greater than %d' % (countPV, self.nPointsMin))
             # end if
             nPoints = len(self.VoltageX)
 
@@ -755,7 +759,7 @@ class PhotovoltaicModelCore(object):
                 # end if
             # end if
 
-            self.nPoints        = (2 * nPoints) if (nPoints >= 50) else 100
+            self.nPoints        = nPoints if (nPoints >= self.nPointsMin) else self.nPointsDef
             Vstep               = (self.VoltageX[nPoints - 1] - self.VoltageX[0]) / float(self.nPoints)
             Vstart              = self.VoltageX[0]
             if (Vstart > 0.0):
@@ -778,7 +782,7 @@ class PhotovoltaicModelCore(object):
             self.CurrentY       = None
 
             if (self.ISCX > 0.0) and (self.VOCX > 0.0) and (self.FFX > 0.0):
-                self.reportMessage = "Isc = %.4g A ; Voc = %.4g V ; FF = %.4g %%" % (self.ISCX, self.VOCX, 100.0 * self.FFX)
+                self.reportMessage = "Isc = %.4g A ; Voc = %.4g V ; FF = %.4g %% ; Pm = %.4g W" % (self.ISCX, self.VOCX, 100.0 * self.FFX, self.FFX * self.ISCX * self.VOCX)
             else:
                 self.reportMessage = "! The photovoltaic parameters cannot be extracted"
             # end if
@@ -872,13 +876,13 @@ class PhotovoltaicModelCore(object):
                 self.Vstart     = 0.0
                 self.Vend       = 1.0
             # end if
-            if (self.nPoints < 100):
-                self.nPoints = 100
-            elif (self.nPoints > 1000):
-                self.nPoints    = 1000
+            if (self.nPoints   < self.nPointsMin):
+                self.nPoints = self.nPointsMin
+            elif (self.nPoints > self.nPointsMax):
+                self.nPoints = self.nPointsMax
             # end if
             if (self.Vstart > 0.0):
-                self.Vstart     = 0.0
+                self.Vstart  = 0.0
             # end if
             (aI, aIZ) = self.calculateCurrent(self.Vend)
             if (aI < 0.0):
@@ -940,7 +944,7 @@ class PhotovoltaicModelCore(object):
                 aIprev = aI
             # end for
 
-            if (countPV < 50) and (math.fabs(self.VOCY) > 0.0) and (math.fabs(self.ISCY) > 0.0):
+            if (countPV < self.nPointsMin) and (math.fabs(self.VOCY) > 0.0) and (math.fabs(self.ISCY) > 0.0):
                 # recalculate with more points
                 Vstep = math.fabs(self.VOCY) / float(self.nPoints)
                 self.VoltageY = np.arange(0.0, self.VOCY + Vstep, Vstep)
@@ -966,7 +970,7 @@ class PhotovoltaicModelCore(object):
             # end if
 
             if (self.ISCY > 0.0) and (self.VOCY > 0.0) and (self.FFY > 0.0):
-                self.reportMessage = "Isc = %.4g A ; Voc = %.4g V ; FF = %.4g %%" % (self.ISCY, self.VOCY, 100.0 * self.FFY)
+                self.reportMessage = "Isc = %.4g A ; Voc = %.4g V ; FF = %.4g %% ; Pm = %.4g W" % (self.ISCY, self.VOCY, 100.0 * self.FFY, self.FFY * self.ISCY * self.VOCY)
             else:
                 self.reportMessage = "! The photovoltaic parameters cannot be calculated"
             # end if
@@ -1292,7 +1296,7 @@ class PhotovoltaicModelCore(object):
                     self.plot[idp].get_yaxis().set_visible(True)
                 # end for
 
-                self.plot[0].legend(numpoints=1, fontsize='small', loc='best')
+                self.plot[0].legend(numpoints=1, fontsize='small', loc='upper center')
 
                 afont = FontProperties()
                 tfont = afont.copy()
@@ -1580,6 +1584,7 @@ class PhotovoltaicModelCore(object):
             return
         # end if
         try:
+            self.popmenu.entryconfig("Fit", state="normal" if self.FileLoaded else "disabled")
             self.popmenu.post(event.x_root, event.y_root)
         except:
             pass

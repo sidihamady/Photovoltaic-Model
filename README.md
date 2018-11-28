@@ -68,4 +68,6 @@ The file format consists of two columns (voltage in V  and current in A) separat
 0.05	-20.035e-3  
 ...  
 0.55	-1.5e-8  
-The first two lines and lines beginning with a hash are ignored.
+The first two lines and lines beginning with a hash are ignored.  
+Of course, the fitting algorithm converges faster if provided with good initial guess for the parameters.  
+You can restart fitting as many times as necessary to reach the desired accuracy.
