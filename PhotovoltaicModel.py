@@ -4,7 +4,7 @@
 # ======================================================================================================
 # Photovoltaic Solar Cell Two-Diode Model
 # Code written by:
-#   Sidi Hamady
+#   Pr. Sidi Hamady
 #   Université de Lorraine, France
 #   sidi.hamady@univ-lorraine.fr
 # See Copyright Notice in COPYRIGHT

@@ -4,7 +4,7 @@
 # ======================================================================================================
 # Photovoltaic Solar Cell Two-Diode Model
 # Code written by:
-#   Sidi Hamady
+#   Pr. Sidi Hamady
 #   Université de Lorraine, France
 #   sidi.hamady@univ-lorraine.fr
 # See Copyright Notice in COPYRIGHT
@@ -1569,8 +1569,7 @@ class PhotovoltaicModelCore(object):
                              (self.name                                                         +
                               "\n"                                                              +
                               self.__version__                                                  +
-                              "\nCopyright(C) 2018 Sidi OULD SAAD HAMADY \n"                    +
-                              "Dr. habil. Eng., Associate professor \n"                         +
+                              "\nCopyright(C) 2018-2019 Pr. Sidi OULD SAAD HAMADY \n"           +
                               "Université de Lorraine, France \n"                               +
                               "sidi.hamady@univ-lorraine.fr \n"                                 +
                               "https://github.com/sidihamady/Photovoltaic-Model \n"             +
