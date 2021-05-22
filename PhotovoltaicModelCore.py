@@ -72,21 +72,25 @@ try:
     import matplotlib.pyplot as pl
     from matplotlib.backends.backend_pdf import PdfPages
     import matplotlib.backends.backend_tkagg
-    from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2TkAgg
     from matplotlib.font_manager import FontProperties
     if sys.version_info[0] < 3:
         # Python 2.7.x
+        from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2TkAgg
         import Tkinter as Tk
         import ttk
+        import tkFileDialog
+        import tkFont
+        import tkMessageBox
     else:
         # Python 3.x
+        from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+        from matplotlib.backends.backend_tkagg import NavigationToolbar2Tk as NavigationToolbar2TkAgg
         import tkinter as Tk
         import tkinter.ttk as ttk
+        import tkinter.filedialog as tkFileDialog
+        import tkinter.font as tkFont
+        import tkinter.messagebox as tkMessageBox
     # end if
-    from ttk import *
-    import tkFont
-    import tkMessageBox
-    import tkFileDialog
 
     class NavigationToolbar(NavigationToolbar2TkAgg):
         """ custom Tk toolbar """
@@ -511,7 +515,11 @@ class PhotovoltaicModelCore(object):
             self.toolbar.update()
             self.canvas._tkcanvas.pack(side=Tk.LEFT, fill=Tk.BOTH, expand=1)
 
-            self.canvas.show()
+            if sys.version_info[0] < 3:
+                self.canvas.show()
+            else:
+                self.canvas.draw()
+            #
 
             self.root.protocol('WM_DELETE_WINDOW', self.onClose)
 
