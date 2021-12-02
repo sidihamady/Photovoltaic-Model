@@ -334,7 +334,8 @@ class PhotovoltaicModelCore(object):
         if (self.thread is None):
             return self.running
         # end if
-        if (not self.thread.isAlive()):
+        threadalive = self.thread.isAlive() if (sys.version_info[0] < 3) else self.thread.is_alive()
+        if (not threadalive):
             self.thread  = None
             self.running = False
         # end if
