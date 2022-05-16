@@ -271,13 +271,13 @@ class PhotovoltaicModelCore(object):
 
         # Reverse saturation current in A for diode 1
         self.Is1            = Is1           if ((Is1    > 0.0)          and (Is1    <= 1e-3))           else 1e-9
-        self.n1             = n1            if ((n1     >= 1.0)         and (n1     <= 1000.0))           else 1.0
+        self.n1             = n1            if ((n1     >= 1.0)         and (n1     <= 100.0))            else 1.0
 
         # Reverse saturation current in A for diode 2
         self.Is2            = Is1           if ((Is1    >= 0.0)         and (Is1    <= 1e-3))           else 1e-9
 
         # Ideality factor for diode 2
-        self.n2             = n2            if ((n2     >= 1.0)         and (n2     <= 2000.0))           else 2.0
+        self.n2             = n2            if ((n2     >= 1.0)         and (n2     <= 200.0))          else 2.0
 
         # Enable/Disable diode 2
         self.Diode2         = Diode2
@@ -1096,10 +1096,10 @@ class PhotovoltaicModelCore(object):
             self.Isc            = self.getFloatValue(self.IscEdit,      self.Isc,       0.0,    100.0,  "%.3g")
 
             self.Is1            = self.getFloatValue(self.Is1Edit,      self.Is1,       1e-15,  1e-3,   "%.3g")
-            self.n1             = self.getFloatValue(self.n1Edit,       self.n1,        1.0,    1000.0, "%.3f")
+            self.n1             = self.getFloatValue(self.n1Edit,       self.n1,        1.0,    100.0,  "%.3f")
 
             self.Is2            = self.getFloatValue(self.Is2Edit,      self.Is2,       0.0,    1e-3,   "%.3g")
-            self.n2             = self.getFloatValue(self.n2Edit,       self.n2,        1.0,    2000.0, "%.3f")
+            self.n2             = self.getFloatValue(self.n2Edit,       self.n2,        1.0,    200.0,  "%.3f")
             self.Diode2         = self.Diode2Var.get()
 
             self.Rs             = self.getFloatValue(self.RsEdit,       self.Rs,        1e-6,   1e6,    "%.3g")
@@ -1230,13 +1230,13 @@ class PhotovoltaicModelCore(object):
                 if dver.StrictVersion(sp.__version__) >= dver.StrictVersion("0.19.1"):
                     popt, pcov = spo.curve_fit(self.FitFunc if self.Diode2 else self.FitFuncD, self.VoltageX, self.CurrentX,
                         bounds=([1e-15, 1e-15, 1.0, 0.0, 1.0, 1e-9, 1e-6] if self.Diode2 else [1e-15, 1e-15, 1.0, 1e-9, 1e-6],
-                        [10.0, 1e-3, 1000.0, 1e-3, 1000.0, 1e6, 1e9] if self.Diode2 else [10.0, 1e-3, 1000.0, 1e6, 1e9]),
+                        [10.0, 1e-3, 100.0, 1e-3, 100.0, 1e6, 1e9] if self.Diode2 else [10.0, 1e-3, 100.0, 1e6, 1e9]),
                         p0=np.array([self.Isc, self.Is1, self.n1, self.Is2, self.n2, self.Rs, self.Rp] if self.Diode2 else [self.Isc, self.Is1, self.n1, self.Rs, self.Rp]),
                         maxfev=100)
                 else:
                     popt, pcov = spo.curve_fit(self.FitFunc if self.Diode2 else self.FitFuncD, self.VoltageX, self.CurrentX,
                         bounds=([1e-15, 1e-15, 1.0, 0.0, 1.0, 1e-9, 1e-6] if self.Diode2 else [1e-15, 1e-15, 1.0, 1e-9, 1e-6],
-                        [10.0, 1e-3, 1000.0, 1e-3, 1000.0, 1e6, 1e9] if self.Diode2 else [10.0, 1e-3, 1000.0, 1e6, 1e9]),
+                        [10.0, 1e-3, 100.0, 1e-3, 100.0, 1e6, 1e9] if self.Diode2 else [10.0, 1e-3, 100.0, 1e6, 1e9]),
                         p0=np.array([self.Isc, self.Is1, self.n1, self.Is2, self.n2, self.Rs, self.Rp] if self.Diode2 else [self.Isc, self.Is1, self.n1, self.Rs, self.Rp]))
                 # end if
                 self.Isc        = popt[0]
