@@ -180,6 +180,7 @@ class PhotovoltaicModelCore(object):
         self.Vstart             = 0.0                   # Voltage start value in V
         self.Vend               = 1.0                   # Voltage end value in V
         self.OutputFilename     = './PhotovoltaicModelOutput'
+        self.NS                 = 1                     # Number of solar cells in series
 
         # current-voltage characteristic loaded from a text file (e.g. experimental data)
         self.VoltageX           = None
@@ -192,6 +193,8 @@ class PhotovoltaicModelCore(object):
         self.FFX                = None
         self.PVguess            = True
         #
+
+        self.VOCX               = self.Vend
 
         # calculated parameters
         self.VoltageY           = None
@@ -246,6 +249,7 @@ class PhotovoltaicModelCore(object):
         Diode2                  = True,
         Rs                      = 10.0,
         Rp                      = 10000.0,
+        NS                      = 1,
         Vstart                  = 0.0,
         Vend                    = 1.0,
         InputFilename           = None,
@@ -267,13 +271,13 @@ class PhotovoltaicModelCore(object):
 
         # Reverse saturation current in A for diode 1
         self.Is1            = Is1           if ((Is1    > 0.0)          and (Is1    <= 1e-3))           else 1e-9
-        self.n1             = n1            if ((n1     >= 1.0)         and (n1     <= 10.0))           else 1.0
+        self.n1             = n1            if ((n1     >= 1.0)         and (n1     <= 1000.0))           else 1.0
 
         # Reverse saturation current in A for diode 2
         self.Is2            = Is1           if ((Is1    >= 0.0)         and (Is1    <= 1e-3))           else 1e-9
 
         # Ideality factor for diode 2
-        self.n2             = n2            if ((n2     >= 1.0)         and (n2     <= 20.0))           else 2.0
+        self.n2             = n2            if ((n2     >= 1.0)         and (n2     <= 2000.0))           else 2.0
 
         # Enable/Disable diode 2
         self.Diode2         = Diode2
@@ -284,11 +288,15 @@ class PhotovoltaicModelCore(object):
         # Parallel resistance in Ohms
         self.Rp             = Rp            if ((Rp     >= 1e-3)        and (Rp     <= 1e9))            else 10000.0
 
+
+        # Number of solar cells in series
+        self.NS             = NS            if ((NS     >= 1)           and (NS     <= 1000))           else 1
+
         # Voltage start value in V
-        self.Vstart         = Vstart        if ((Vstart >= 0.0)         and (Vstart <= 10.0))           else 0.0
+        self.Vstart         = Vstart        if ((Vstart >= 0.0)         and (Vstart <= 500.0))           else 0.0
 
         # Voltage end value in V
-        self.Vend           = Vend          if ((Vend   >= 0.0)         and (Vend   <= 10.0))           else 0.0
+        self.Vend           = Vend          if ((Vend   >= 0.0)         and (Vend   <= 500.0))           else 0.0
 
         # Output file name without extension (used to save figure in PDF format if in GUI mode, and the text output data).
         #   set to None to disable.
@@ -401,13 +409,12 @@ class PhotovoltaicModelCore(object):
             spxm = 1
             parFrameA = Tk.Frame(self.root)
             parFrameA.pack(fill=Tk.X, side=Tk.TOP, padx=spx, pady=spx)
+            parFrameAt = Tk.Frame(self.root)
+            parFrameAt.pack(fill=Tk.X, side=Tk.TOP, padx=spx, pady=spx)
             parFrameB = Tk.Frame(self.root)
             parFrameB.pack(fill=Tk.X, side=Tk.TOP, padx=spx, pady=spx)
 
             FloatValidate = (parFrameA.register(self.onFloatValidate), '%P')
-
-            self.LLabel = Tk.Label(parFrameA, text=" ")
-            self.LLabel.pack(fill=Tk.X, side=Tk.LEFT, expand=True, padx=(spxm, spxm), pady=spy)
 
             self.TemperatureLabel = Tk.Label(parFrameA, text="T (K): ")
             self.TemperatureLabel.pack(side=Tk.LEFT, padx=(spx, spxm), pady=spy)
@@ -459,23 +466,44 @@ class PhotovoltaicModelCore(object):
             self.n2Edit.prev = None
             self.n2Edit.next = None
 
-            self.RsLabel = Tk.Label(parFrameA, text="Rs (Ohms): ")
+            self.RsLabel = Tk.Label(parFrameAt, text="Rs (Ohms): ")
             self.RsLabel.pack(side=Tk.LEFT, padx=(spx, spxm), pady=spy)
-            self.RsEdit = Tk.Entry(parFrameA, width=10, validate="key", vcmd=FloatValidate)
+            self.RsEdit = Tk.Entry(parFrameAt, width=10, validate="key", vcmd=FloatValidate)
             self.RsEdit.pack(side=Tk.LEFT, padx=(spxm, spx), pady=spy)
             self.RsEdit.insert(0, ("%.4g" % self.Rs) if (self.Rs is not None) else "")
             self.RsEdit.prev = None
             self.RsEdit.next = None
-            self.RpLabel = Tk.Label(parFrameA, text="Rp (Ohms): ")
+            self.RpLabel = Tk.Label(parFrameAt, text="Rp (Ohms): ")
             self.RpLabel.pack(side=Tk.LEFT, padx=(spx, spxm), pady=spy)
-            self.RpEdit = Tk.Entry(parFrameA, width=10, validate="key", vcmd=FloatValidate)
+            self.RpEdit = Tk.Entry(parFrameAt, width=10, validate="key", vcmd=FloatValidate)
             self.RpEdit.pack(side=Tk.LEFT, padx=(spxm, spx), pady=spy)
             self.RpEdit.insert(0, ("%.4g" % self.Rp) if (self.Rp is not None) else "")
             self.RpEdit.prev = None
             self.RpEdit.next = None
 
-            self.RLabel = Tk.Label(parFrameA, text=" ")
-            self.RLabel.pack(fill=Tk.X, side=Tk.LEFT, expand=True, padx=(spxm, spxm), pady=spy)
+            self.NSLabel = Tk.Label(parFrameAt, text="# Cells in series: ")
+            self.NSLabel.pack(side=Tk.LEFT, padx=(spx, spxm), pady=spy)
+            self.NSEdit = Tk.Entry(parFrameAt, width=10, validate="key", vcmd=FloatValidate)
+            self.NSEdit.pack(side=Tk.LEFT, padx=(spxm, spx), pady=spy)
+            self.NSEdit.insert(0, ("%d" % self.NS) if (self.NS is not None) else "")
+            self.NSEdit.prev = None
+            self.NSEdit.next = None
+
+            self.VstartLabel = Tk.Label(parFrameAt, text="Vstart (V): ")
+            self.VstartLabel.pack(side=Tk.LEFT, padx=(spx, spxm), pady=spy)
+            self.VstartEdit = Tk.Entry(parFrameAt, width=10, validate="key", vcmd=FloatValidate)
+            self.VstartEdit.pack(side=Tk.LEFT, padx=(spxm, spx), pady=spy)
+            self.VstartEdit.insert(0, ("%g" % self.Vstart) if (self.Vstart is not None) else "")
+            self.VstartEdit.prev = None
+            self.VstartEdit.next = None
+
+            self.VendLabel = Tk.Label(parFrameAt, text="Vend (V): ")
+            self.VendLabel.pack(side=Tk.LEFT, padx=(spx, spxm), pady=spy)
+            self.VendEdit = Tk.Entry(parFrameAt, width=10, validate="key", vcmd=FloatValidate)
+            self.VendEdit.pack(side=Tk.LEFT, padx=(spxm, spx), pady=spy)
+            self.VendEdit.insert(0, ("%g" % self.Vend) if (self.Vend is not None) else "")
+            self.VendEdit.prev = None
+            self.VendEdit.next = None
 
             self.InputFilenameLabel = Tk.Label(parFrameB, width=16, text="Input Filename: ")
             self.InputFilenameLabel.pack(side=Tk.LEFT)
@@ -850,15 +878,15 @@ class PhotovoltaicModelCore(object):
         Vp   = V - (self.Rs * I)
         Isc  = -self.Isc
         Iph  = Isc
-        Iph += (self.Is1 * (math.exp(self.Rs * Isc / (self.n1 * self.VT)) - 1.0))
+        Iph += (self.Is1 * (math.exp(self.Rs * Isc / (self.n1 * self.NS * self.VT)) - 1.0))
         if self.Diode2:
-            Iph += (self.Is2 * (math.exp(self.Rs * Isc / (self.n2 * self.VT)) - 1.0))
+            Iph += (self.Is2 * (math.exp(self.Rs * Isc / (self.n2 * self.NS * self.VT)) - 1.0))
         # end if
         Iph += ((self.Rs / self.Rp) * Isc)
         fI   = Iph
-        fI  += (self.Is1 * (math.exp(Vp / (self.n1 * self.VT)) - 1.0))
+        fI  += (self.Is1 * (math.exp(Vp / (self.n1 * self.NS * self.VT)) - 1.0))
         if self.Diode2:
-            fI  += (self.Is2 * (math.exp(Vp / (self.n2 * self.VT)) - 1.0))
+            fI  += (self.Is2 * (math.exp(Vp / (self.n2 * self.NS * self.VT)) - 1.0))
         # end if
         fI  += (Vp / self.Rp)
         fI  -= I
@@ -867,9 +895,9 @@ class PhotovoltaicModelCore(object):
 
     def calculateCurrent(self, V):
         fIZ  = -self.Isc
-        fIZ += (self.Is1 * (math.exp(V / (self.n1 * self.VT)) - 1.0))
+        fIZ += (self.Is1 * (math.exp(V / (self.n1 * self.NS * self.VT)) - 1.0))
         if self.Diode2:
-            fIZ += (self.Is2 * (math.exp(V / (self.n2 * self.VT)) - 1.0))
+            fIZ += (self.Is2 * (math.exp(V / (self.n2 * self.NS * self.VT)) - 1.0))
         # end if
         fIZ += (V / self.Rp)
         fI   = spo.fsolve(self.CurrentFunc, x0=fIZ, args=(V,))
@@ -1065,17 +1093,23 @@ class PhotovoltaicModelCore(object):
             self.Temperature    = self.getFloatValue(self.TemperatureEdit, self.Temperature, 100.0, 500.0, "%.1f")
             self.VT             = self.VT300 * self.Temperature / 300.0
 
-            self.Isc            = self.getFloatValue(self.IscEdit,  self.Isc,   0.0,    100.0,  "%.3g")
+            self.Isc            = self.getFloatValue(self.IscEdit,      self.Isc,       0.0,    100.0,  "%.3g")
 
-            self.Is1            = self.getFloatValue(self.Is1Edit,  self.Is1,   1e-15,  1e-3,   "%.3g")
-            self.n1             = self.getFloatValue(self.n1Edit,   self.n1,    1.0,    10.0,   "%.3f")
+            self.Is1            = self.getFloatValue(self.Is1Edit,      self.Is1,       1e-15,  1e-3,   "%.3g")
+            self.n1             = self.getFloatValue(self.n1Edit,       self.n1,        1.0,    1000.0, "%.3f")
 
-            self.Is2            = self.getFloatValue(self.Is2Edit,  self.Is2,   0.0,    1e-3,   "%.3g")
-            self.n2             = self.getFloatValue(self.n2Edit,   self.n2,    1.0,    10.0,   "%.3f")
+            self.Is2            = self.getFloatValue(self.Is2Edit,      self.Is2,       0.0,    1e-3,   "%.3g")
+            self.n2             = self.getFloatValue(self.n2Edit,       self.n2,        1.0,    2000.0, "%.3f")
             self.Diode2         = self.Diode2Var.get()
 
-            self.Rs             = self.getFloatValue(self.RsEdit,   self.Rs,    1e-6,   1e6,    "%.3g")
-            self.Rp             = self.getFloatValue(self.RpEdit,   self.Rp,    1e-3,   1e9,    "%.3g")
+            self.Rs             = self.getFloatValue(self.RsEdit,       self.Rs,        1e-6,   1e6,    "%.3g")
+            self.Rp             = self.getFloatValue(self.RpEdit,       self.Rp,        1e-3,   1e9,    "%.3g")
+
+            # Number of solar cells in series
+            self.NS             = self.getFloatValue(self.NSEdit,       self.NS,        1,      1000,   "%d")
+
+            self.Vstart         = self.getFloatValue(self.VstartEdit,   self.Vstart,    0.0,    1000.0, "%g")
+            self.Vend           = self.getFloatValue(self.VendEdit,     self.Vend,      0.0,    1000.0, "%g")
 
             try:
                 strT = self.InputFilenameEdit.get().strip("\r\n\t")
@@ -1196,13 +1230,13 @@ class PhotovoltaicModelCore(object):
                 if dver.StrictVersion(sp.__version__) >= dver.StrictVersion("0.19.1"):
                     popt, pcov = spo.curve_fit(self.FitFunc if self.Diode2 else self.FitFuncD, self.VoltageX, self.CurrentX,
                         bounds=([1e-15, 1e-15, 1.0, 0.0, 1.0, 1e-9, 1e-6] if self.Diode2 else [1e-15, 1e-15, 1.0, 1e-9, 1e-6],
-                        [10.0, 1e-3, 10.0, 1e-3, 10.0, 1e6, 1e9] if self.Diode2 else [10.0, 1e-3, 10.0, 1e6, 1e9]),
+                        [10.0, 1e-3, 1000.0, 1e-3, 1000.0, 1e6, 1e9] if self.Diode2 else [10.0, 1e-3, 1000.0, 1e6, 1e9]),
                         p0=np.array([self.Isc, self.Is1, self.n1, self.Is2, self.n2, self.Rs, self.Rp] if self.Diode2 else [self.Isc, self.Is1, self.n1, self.Rs, self.Rp]),
                         maxfev=100)
                 else:
                     popt, pcov = spo.curve_fit(self.FitFunc if self.Diode2 else self.FitFuncD, self.VoltageX, self.CurrentX,
                         bounds=([1e-15, 1e-15, 1.0, 0.0, 1.0, 1e-9, 1e-6] if self.Diode2 else [1e-15, 1e-15, 1.0, 1e-9, 1e-6],
-                        [10.0, 1e-3, 10.0, 1e-3, 10.0, 1e6, 1e9] if self.Diode2 else [10.0, 1e-3, 10.0, 1e6, 1e9]),
+                        [10.0, 1e-3, 1000.0, 1e-3, 1000.0, 1e6, 1e9] if self.Diode2 else [10.0, 1e-3, 1000.0, 1e6, 1e9]),
                         p0=np.array([self.Isc, self.Is1, self.n1, self.Is2, self.n2, self.Rs, self.Rp] if self.Diode2 else [self.Isc, self.Is1, self.n1, self.Rs, self.Rp]))
                 # end if
                 self.Isc        = popt[0]
@@ -1356,6 +1390,12 @@ class PhotovoltaicModelCore(object):
                 self.RsEdit.insert (0, "%.4g" % self.Rs)
                 self.RpEdit.delete (0, Tk.END)
                 self.RpEdit.insert (0, "%.4g" % self.Rp)
+                self.NSEdit.delete (0, Tk.END)
+                self.NSEdit.insert (0, "%d" % self.NS)
+                self.VstartEdit.delete (0, Tk.END)
+                self.VstartEdit.insert (0, "%g" % self.Vstart)
+                self.VendEdit.delete (0, Tk.END)
+                self.VendEdit.insert (0, "%g" % self.Vend)
             # end if
 
             self.btnFit.configure(state="normal" if self.FileLoaded else "disabled")
