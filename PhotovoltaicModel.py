@@ -24,7 +24,7 @@
 # import the program core class in PhotovoltaicModelCore.py
 from PhotovoltaicModelCore import *
 
-PVM = PhotovoltaicModelCore(verbose = False)
+PVM = PhotovoltaicModelCore(verbose = True)
 
 PVM.calculate(
     Temperature             = 300.0,                        # Temperature in K
@@ -36,6 +36,7 @@ PVM.calculate(
     Diode2                  = True,                         # Enable/Disable diode 2
     Rs                      = 1.0,                          # Series resistance in Ohms
     Rp                      = 10000.0,                      # Parallel resistance in Ohms
+    NS                      = 1,                            # Number of solar cells in series
     Vstart                  = 0.0,                          # Voltage start value in V
     Vend                    = 1.0,                          # Voltage end value in V
     InputFilename           = None,                         # current-voltage characteristic filename (e.g. containing experimental data)
