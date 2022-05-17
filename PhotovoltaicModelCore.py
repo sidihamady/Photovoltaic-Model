@@ -33,6 +33,7 @@
 #           Is2                     = 1e-9,                         # Reverse saturation current in A for diode 2
 #           n2                      = 2.0,                          # Ideality factor for diode 2
 #           Diode2                  = True,                         # Enable/Disable diode 2
+#           Ncells                  = 1,                            # Number of solar cells in series
 #           Rs                      = 1.0,                          # Series resistance in Ohms
 #           Rp                      = 10000.0,                      # Parallel resistance in Ohms
 #           Vstart                  = 0.0,                          # Voltage start value in V
@@ -149,7 +150,7 @@ class PhotovoltaicModelCore(object):
         """ the PhotovoltaicModel class constructor """
 
         self.name               = "Photovoltaic Solar Cell Two-Diode Model"
-        self.__version__        = "Version 1.0 Build 1811"
+        self.__version__        = "Version 1.0 Build 2205"
 
         # Basic constants
         self.VT300              = 0.02585202874091      # kT/q at T = 300 K
@@ -175,12 +176,12 @@ class PhotovoltaicModelCore(object):
         self.Is2                = 1e-9                  # Reverse saturation current in A for diode 2
         self.n2                 = 2.0                   # Ideality factor for diode 2
         self.Diode2             = True                  # Enable/Disable diode 2
+        self.Ncells             = 1                     # Number of solar cells in series
         self.Rs                 = 10.0                  # Series resistance in Ohms
         self.Rp                 = 10000.0               # Parallel resistance in Ohms
         self.Vstart             = 0.0                   # Voltage start value in V
         self.Vend               = 1.0                   # Voltage end value in V
         self.OutputFilename     = './PhotovoltaicModelOutput'
-        self.NS                 = 1                     # Number of solar cells in series
 
         # current-voltage characteristic loaded from a text file (e.g. experimental data)
         self.VoltageX           = None
@@ -247,9 +248,9 @@ class PhotovoltaicModelCore(object):
         Is2                     = 1e-9,
         n2                      = 2.0,
         Diode2                  = True,
+        Ncells                  = 1,
         Rs                      = 10.0,
         Rp                      = 10000.0,
-        NS                      = 1,
         Vstart                  = 0.0,
         Vend                    = 1.0,
         InputFilename           = None,
@@ -271,7 +272,7 @@ class PhotovoltaicModelCore(object):
 
         # Reverse saturation current in A for diode 1
         self.Is1            = Is1           if ((Is1    > 0.0)          and (Is1    <= 1e-3))           else 1e-9
-        self.n1             = n1            if ((n1     >= 1.0)         and (n1     <= 100.0))            else 1.0
+        self.n1             = n1            if ((n1     >= 1.0)         and (n1     <= 100.0))          else 1.0
 
         # Reverse saturation current in A for diode 2
         self.Is2            = Is1           if ((Is1    >= 0.0)         and (Is1    <= 1e-3))           else 1e-9
@@ -282,21 +283,20 @@ class PhotovoltaicModelCore(object):
         # Enable/Disable diode 2
         self.Diode2         = Diode2
 
+        # Number of solar cells in series
+        self.Ncells         = Ncells        if ((Ncells >= 1)           and (Ncells     <= 1000))       else 1
+
         # Series resistance in Ohms
         self.Rs             = Rs            if ((Rs     >= 1e-6)        and (Rs     <= 1e6))            else 10.0
 
         # Parallel resistance in Ohms
         self.Rp             = Rp            if ((Rp     >= 1e-3)        and (Rp     <= 1e9))            else 10000.0
 
-
-        # Number of solar cells in series
-        self.NS             = NS            if ((NS     >= 1)           and (NS     <= 1000))           else 1
-
         # Voltage start value in V
-        self.Vstart         = Vstart        if ((Vstart >= 0.0)         and (Vstart <= 500.0))           else 0.0
+        self.Vstart         = Vstart        if ((Vstart >= 0.0)         and (Vstart <= 500.0))          else 0.0
 
         # Voltage end value in V
-        self.Vend           = Vend          if ((Vend   >= 0.0)         and (Vend   <= 500.0))           else 0.0
+        self.Vend           = Vend          if ((Vend   >= 0.0)         and (Vend   <= 500.0))          else 0.0
 
         # Output file name without extension (used to save figure in PDF format if in GUI mode, and the text output data).
         #   set to None to disable.
@@ -385,9 +385,8 @@ class PhotovoltaicModelCore(object):
             self.root.withdraw()
             self.root.wm_title(self.name)
 
-            self.figure = matplotlib.figure.Figure(figsize=(10,8), dpi=100, facecolor='#F1F1F1', linewidth=1.0, frameon=True)
-
-            self.figure.subplots_adjust(top = 0.9, bottom = 0.1, left = 0.09, right = 0.95, wspace = 0.25, hspace = 0.25)
+            self.figure = matplotlib.figure.Figure(figsize=(10,8), dpi=100, facecolor='#FFFFFF', edgecolor = '#C2984F', linewidth = 1.0, frameon=True)
+            self.figure.subplots_adjust(top = 0.90, bottom = 0.12, left = 0.12, right = 0.96, wspace = 0.25, hspace = 0.25)
 
             self.plot       = {}
             self.plot[0]    = self.figure.add_subplot(111)
@@ -404,8 +403,10 @@ class PhotovoltaicModelCore(object):
             self.datax[1]   = None
             self.datay[1]   = None
 
+            controlWidth    = 10
+
             spx  = 6
-            spy  = 12
+            spy  = 6
             spxm = 1
             parFrameA = Tk.Frame(self.root)
             parFrameA.pack(fill=Tk.X, side=Tk.TOP, padx=spx, pady=spx)
@@ -418,7 +419,7 @@ class PhotovoltaicModelCore(object):
 
             self.TemperatureLabel = Tk.Label(parFrameA, text="T (K): ")
             self.TemperatureLabel.pack(side=Tk.LEFT, padx=(spx, spxm), pady=spy)
-            self.TemperatureEdit = Tk.Entry(parFrameA, width=10, validate="key", vcmd=FloatValidate)
+            self.TemperatureEdit = Tk.Entry(parFrameA, width=controlWidth, validate="key", vcmd=FloatValidate)
             self.TemperatureEdit.pack(side=Tk.LEFT, padx=(spxm, spx), pady=spy)
             self.TemperatureEdit.insert(0, ("%.1f" % self.Temperature) if (self.Temperature is not None) else "")
             self.TemperatureEdit.prev = None
@@ -426,7 +427,7 @@ class PhotovoltaicModelCore(object):
 
             self.IscLabel = Tk.Label(parFrameA, text="Isc (A): ")
             self.IscLabel.pack(side=Tk.LEFT, padx=(spxm, spxm), pady=spy)
-            self.IscEdit = Tk.Entry(parFrameA, width=10, validate="key", vcmd=FloatValidate)
+            self.IscEdit = Tk.Entry(parFrameA, width=controlWidth, validate="key", vcmd=FloatValidate)
             self.IscEdit.pack(side=Tk.LEFT, padx=(spxm, spx), pady=spy)
             self.IscEdit.insert(0, ("%.4g" % self.Isc) if (self.Isc is not None) else "")
             self.IscEdit.prev = None
@@ -434,14 +435,14 @@ class PhotovoltaicModelCore(object):
 
             self.Is1Label = Tk.Label(parFrameA, text="Is1 (A): ")
             self.Is1Label.pack(side=Tk.LEFT, padx=(spx, spxm), pady=spy)
-            self.Is1Edit = Tk.Entry(parFrameA, width=10, validate="key", vcmd=FloatValidate)
+            self.Is1Edit = Tk.Entry(parFrameA, width=controlWidth, validate="key", vcmd=FloatValidate)
             self.Is1Edit.pack(side=Tk.LEFT, padx=(spxm, spx), pady=spy)
             self.Is1Edit.insert(0, ("%.4g" % self.Is1) if (self.Is1 is not None) else "")
             self.Is1Edit.prev = None
             self.Is1Edit.next = None
             self.n1Label = Tk.Label(parFrameA, text="n1: ")
             self.n1Label.pack(side=Tk.LEFT, padx=(spx, spxm), pady=spy)
-            self.n1Edit = Tk.Entry(parFrameA, width=7, validate="key", vcmd=FloatValidate)
+            self.n1Edit = Tk.Entry(parFrameA, width=controlWidth, validate="key", vcmd=FloatValidate)
             self.n1Edit.pack(side=Tk.LEFT, padx=(spxm, spx), pady=spy)
             self.n1Edit.insert(0, ("%.4f" % self.n1) if (self.n1 is not None) else "")
             self.n1Edit.prev = None
@@ -449,7 +450,7 @@ class PhotovoltaicModelCore(object):
 
             self.Is2Label = Tk.Label(parFrameA, text="Is2 (A): ")
             self.Is2Label.pack(side=Tk.LEFT, padx=(spx, spxm), pady=spy)
-            self.Is2Edit = Tk.Entry(parFrameA, width=10, validate="key", vcmd=FloatValidate)
+            self.Is2Edit = Tk.Entry(parFrameA, width=controlWidth, validate="key", vcmd=FloatValidate)
             self.Is2Edit.pack(side=Tk.LEFT, padx=(spxm, spx), pady=spy)
             self.Is2Edit.insert(0, ("%.4g" % self.Is2) if (self.Is2 is not None) else "")
             self.Is2Edit.prev = None
@@ -460,38 +461,39 @@ class PhotovoltaicModelCore(object):
             self.Diode2Opt.select()
             self.n2Label = Tk.Label(parFrameA, text="n2: ")
             self.n2Label.pack(side=Tk.LEFT, padx=(spx, spxm), pady=spy)
-            self.n2Edit = Tk.Entry(parFrameA, width=10, validate="key", vcmd=FloatValidate)
+            self.n2Edit = Tk.Entry(parFrameA, width=controlWidth, validate="key", vcmd=FloatValidate)
             self.n2Edit.pack(side=Tk.LEFT, padx=(spxm, spx), pady=spy)
             self.n2Edit.insert(0, ("%.4f" % self.n2) if (self.n2 is not None) else "")
             self.n2Edit.prev = None
             self.n2Edit.next = None
 
+            self.NcellsLabel = Tk.Label(parFrameA, text="# Cells in series: ")
+            self.NcellsLabel.pack(side=Tk.LEFT, padx=(spx, spxm), pady=spy)
+            self.NcellsEdit = Tk.Entry(parFrameA, width=controlWidth//2, validate="key", vcmd=FloatValidate)
+            self.NcellsEdit.pack(side=Tk.LEFT, padx=(spxm, spx), pady=spy)
+            self.NcellsEdit.insert(0, ("%d" % self.Ncells) if (self.Ncells is not None) else "")
+            self.NcellsEdit.prev = None
+            self.NcellsEdit.next = None
+
             self.RsLabel = Tk.Label(parFrameAt, text="Rs (Ohms): ")
             self.RsLabel.pack(side=Tk.LEFT, padx=(spx, spxm), pady=spy)
-            self.RsEdit = Tk.Entry(parFrameAt, width=10, validate="key", vcmd=FloatValidate)
+            self.RsEdit = Tk.Entry(parFrameAt, width=controlWidth, validate="key", vcmd=FloatValidate)
             self.RsEdit.pack(side=Tk.LEFT, padx=(spxm, spx), pady=spy)
             self.RsEdit.insert(0, ("%.4g" % self.Rs) if (self.Rs is not None) else "")
             self.RsEdit.prev = None
             self.RsEdit.next = None
+
             self.RpLabel = Tk.Label(parFrameAt, text="Rp (Ohms): ")
             self.RpLabel.pack(side=Tk.LEFT, padx=(spx, spxm), pady=spy)
-            self.RpEdit = Tk.Entry(parFrameAt, width=10, validate="key", vcmd=FloatValidate)
+            self.RpEdit = Tk.Entry(parFrameAt, width=controlWidth, validate="key", vcmd=FloatValidate)
             self.RpEdit.pack(side=Tk.LEFT, padx=(spxm, spx), pady=spy)
             self.RpEdit.insert(0, ("%.4g" % self.Rp) if (self.Rp is not None) else "")
             self.RpEdit.prev = None
             self.RpEdit.next = None
 
-            self.NSLabel = Tk.Label(parFrameAt, text="# Cells in series: ")
-            self.NSLabel.pack(side=Tk.LEFT, padx=(spx, spxm), pady=spy)
-            self.NSEdit = Tk.Entry(parFrameAt, width=10, validate="key", vcmd=FloatValidate)
-            self.NSEdit.pack(side=Tk.LEFT, padx=(spxm, spx), pady=spy)
-            self.NSEdit.insert(0, ("%d" % self.NS) if (self.NS is not None) else "")
-            self.NSEdit.prev = None
-            self.NSEdit.next = None
-
             self.VstartLabel = Tk.Label(parFrameAt, text="Vstart (V): ")
             self.VstartLabel.pack(side=Tk.LEFT, padx=(spx, spxm), pady=spy)
-            self.VstartEdit = Tk.Entry(parFrameAt, width=10, validate="key", vcmd=FloatValidate)
+            self.VstartEdit = Tk.Entry(parFrameAt, width=controlWidth, validate="key", vcmd=FloatValidate)
             self.VstartEdit.pack(side=Tk.LEFT, padx=(spxm, spx), pady=spy)
             self.VstartEdit.insert(0, ("%g" % self.Vstart) if (self.Vstart is not None) else "")
             self.VstartEdit.prev = None
@@ -499,11 +501,15 @@ class PhotovoltaicModelCore(object):
 
             self.VendLabel = Tk.Label(parFrameAt, text="Vend (V): ")
             self.VendLabel.pack(side=Tk.LEFT, padx=(spx, spxm), pady=spy)
-            self.VendEdit = Tk.Entry(parFrameAt, width=10, validate="key", vcmd=FloatValidate)
+            self.VendEdit = Tk.Entry(parFrameAt, width=controlWidth, validate="key", vcmd=FloatValidate)
             self.VendEdit.pack(side=Tk.LEFT, padx=(spxm, spx), pady=spy)
             self.VendEdit.insert(0, ("%g" % self.Vend) if (self.Vend is not None) else "")
             self.VendEdit.prev = None
             self.VendEdit.next = None
+
+            self.GeneratorConventionVar = Tk.BooleanVar()
+            self.GeneratorConventionOpt = Tk.Checkbutton(parFrameAt, text="Plot in Generator Convention", variable=self.GeneratorConventionVar, command=self.onGeneratorConvention)
+            self.GeneratorConventionOpt.pack(side=Tk.LEFT, padx=(spxm, spx), pady=spy)
 
             self.InputFilenameLabel = Tk.Label(parFrameB, width=16, text="Input Filename: ")
             self.InputFilenameLabel.pack(side=Tk.LEFT)
@@ -521,15 +527,17 @@ class PhotovoltaicModelCore(object):
             self.btnstyle_black = ttk.Style()
             self.btnstyle_black.configure("Black.TButton", foreground="black")
 
-            self.btnFit = ttk.Button(parFrameB, width=18, text="Fit", compound=Tk.LEFT, command=self.onFit)
+            self.btnFit = ttk.Button(parFrameB, width=controlWidth+2, text="Fit", compound=Tk.LEFT, command=self.onFit)
             self.btnFit.pack(side=Tk.LEFT, padx=spx, pady=spy)
             self.btnFit.configure(style="Black.TButton")
             self.btnFit.configure(state="disabled")
 
-            self.btnCalculate = ttk.Button(parFrameB, width=18, text="Calculate", compound=Tk.LEFT, command=self.onStart)
+            self.btnCalculate = ttk.Button(parFrameB, width=controlWidth+2, text="Calculate", compound=Tk.LEFT, command=self.onStart)
             self.btnCalculate.pack(side=Tk.LEFT, padx=spx, pady=spy)
             self.btnCalculate.configure(style="Black.TButton")
+
             self.root.bind('<Return>', self.onEnter)
+
             self.canvas = FigureCanvasTkAgg(self.figure, master=self.root)
             self.canvas._tkcanvas.config(highlightthickness=0)
 
@@ -566,14 +574,14 @@ class PhotovoltaicModelCore(object):
             # center the window
             iw = self.root.winfo_screenwidth()
             ih = self.root.winfo_screenheight()
-            isize = (1020, 680)
+            isize = (1152, 720)
             ix = (iw - isize[0]) / 2
             iy = (ih - isize[1]) / 2
             self.root.geometry("%dx%d+%d+%d" % (isize + (ix, iy)))
 
             self.root.minsize(800, 600)
 
-            self.fontsize = 10
+            self.fontsize = 12
 
             for idp in range(0, self.plotcount):
                 try:
@@ -608,7 +616,6 @@ class PhotovoltaicModelCore(object):
             self.root.bind("<Button-3>", self.onPopmenu)
 
             self.root.deiconify()
-            self.setFocus()
 
             self.GUIstarted = True
 
@@ -678,101 +685,33 @@ class PhotovoltaicModelCore(object):
             self.ModifTime = self.getModifTime(self.InputFilename)
 
             # load the current-voltage characteristic from file (e.g. containing experimental data)
-            IVXData                 = np.loadtxt(self.InputFilename, delimiter=self.DataDelimiter, skiprows=self.SkipRows, usecols=(0,1))
-            self.VoltageX           = IVXData[:,0]                   # V
-            self.CurrentX           = IVXData[:,1]                   # A
+            IVXData         = np.loadtxt(self.InputFilename, delimiter=self.DataDelimiter, skiprows=self.SkipRows, usecols=(0,1))
+            self.VoltageX   = IVXData[:,0]      # Volts
+            self.CurrentX   = IVXData[:,1]      # Amps
             # check the data consistency
-            if ((len (self.VoltageX)                < 5)                        or 
-                (len (self.CurrentX)                < 5)                        or 
-                (len (self.VoltageX)                != len(self.CurrentX))      or 
-                (not (self.VoltageX                 >= -10.0).all())            or 
-                (not (self.VoltageX                 <=  10.0).all())            or 
-                (not (self.CurrentX                 >= -10.0).all())            or 
-                (not (self.CurrentX                 <=  10.0).all())            or
+            if ((len (self.VoltageX)    < 5)                        or 
+                (len (self.CurrentX)    < 5)                        or 
+                (len (self.VoltageX)    != len(self.CurrentX))      or 
+                (not (self.VoltageX     >= -500.0).all())           or 
+                (not (self.VoltageX     <=  500.0).all())           or 
+                (not (self.CurrentX     >= -500.0).all())           or 
+                (not (self.CurrentX     <=  500.0).all())           or
                 (not self.isIncSorted(self.VoltageX))):
                 raise Exception('invalid voltage/current data')
             # end if
+
             nPoints                 = len(self.VoltageX)
+            
+            (aVoltage, aCurrent, VOC, ISC, Vm, Im, FF, countPV, nQindex) = self.checkQuadrant(self.VoltageX, self.CurrentX)
+            self.VoltageX           = aVoltage
+            self.CurrentX           = aCurrent
+            self.VOCX               = VOC
+            self.ISCX               = ISC
+            self.VmX                = Vm
+            self.ImX                = Im
+            self.FFX                = FF
 
-            self.VOCX               = self.VoltageX[nPoints - 1]
-            self.ISCX               = self.CurrentX[0]
-            self.VmX                = 0.0
-            self.ImX                = 0.0
-            self.FFX                = 0.0
-            aPm                     = 0.0
-            aIprev                  = None
-            aVprev                  = None
-            countPV                 = 0
-            # check quadrant
-            # V > 0 and I > 0: to convert to Q4
-            # V < 0 and I > 0: to convert to Q4
-            # V < 0 and I < 0: to convert to Q4
-            # V > 0 and I < 0: the used quadrant
-            nQ  = [0, 0, 0, 0]
-            for aV, aI in zip(self.VoltageX, self.CurrentX):
-                if      (aI > 0.0) and (aV > 0.0):
-                    nQ[0] += 1
-                elif    (aI > 0.0) and (aV < 0.0):
-                    nQ[1] += 1
-                elif    (aI < 0.0) and (aV < 0.0):
-                    nQ[2] += 1
-                elif    (aI < 0.0) and (aV > 0.0):
-                    nQ[3] += 1
-                # end if
-            # end for
-            nQmax   = max(nQ)
-            nQindex = nQ.index(nQmax) + 1
-            if (nQmax < (nPoints / 2)):
-                raise Exception('invalid voltage/current data: no photovoltaic quadrant identified')
-            # end if
-            ii = 0
-            aVX             = np.copy(self.VoltageX)
-            aIX             = np.copy(self.CurrentX)
-            self.VoltageX   = np.array([])
-            self.CurrentX   = np.array([])
-
-            # keep only the photovoltaic part of the current-voltage characteristic
-            # and convert to the fourth quadrant (V > 0 and I < 0) if necessary
-
-            for aV, aI in zip(aVX, aIX):
-
-                if (nQindex != 4):
-                    # always use the solar cell current-voltage characteristic in the fourth quadrant 4 (V > 0 and I < 0)
-                    if      (nQindex == 1):
-                        aI  = -aI
-                    elif    (nQindex == 2):
-                        aI  = -aI
-                        aV  = -aV
-                    elif    (nQindex == 3):
-                        aV  = -aV
-                    # end if
-                    aVX[ii] = aV
-                    aIX[ii] = aI
-                # end if
-
-                if (aIprev is not None) and (aI >= 0.0) and (aIprev <= 0.0):
-                    self.VOCX       = aV
-                # end if
-                if (aVprev is not None) and (aV >= 0.0) and (aVprev <= 0.0):
-                    self.ISCX       = aI
-                # end if
-                if (aI <= 0.0) and (aV >= 0.0):
-                    countPV += 1
-                    self.VoltageX   = np.append(self.VoltageX, aV)
-                    self.CurrentX   = np.append(self.CurrentX, aI)
-                # end if
-                if (aI < 0.0) and (aV > 0.0) and (math.fabs(aI * aV) > aPm):
-                    aPm             = math.fabs(aI * aV)
-                    self.VmX        = aV
-                    self.ImX        = aI
-                # end if
-                aVprev = aV
-                aIprev = aI
-                ii    += 1
-
-            # end for
-
-            if (countPV < (nPoints / 5)) or (countPV < self.nPointsMin):
+            if (countPV < (nPoints // 5)) or (countPV < self.nPointsMin):
                 raise Exception('invalid voltage/current: insufficient number of photovoltaic points (%d): should be greater than %d' % (countPV, self.nPointsMin))
             # end if
             nPoints = len(self.VoltageX)
@@ -782,9 +721,9 @@ class PhotovoltaicModelCore(object):
             # end if
             self.PVpoints = countPV
 
-            self.ISCX       = math.fabs(self.ISCX)
+            self.ISCX = math.fabs(self.ISCX)
             if (self.ISCX > 0.0) and (self.VOCX > 0.0):
-                self.FFX    = math.fabs((self.VmX * self.ImX) / (self.VOCX * self.ISCX))
+                self.FFX = math.fabs((self.VmX * self.ImX) / (self.VOCX * self.ISCX))
                 if (self.FFX > 1.0):
                     # should never happen
                     self.FFX = 0.0
@@ -796,9 +735,9 @@ class PhotovoltaicModelCore(object):
                 # end if
             # end if
 
-            self.nPoints        = nPoints if (nPoints >= self.nPointsMin) else self.nPointsDef
-            Vstep               = (self.VoltageX[nPoints - 1] - self.VoltageX[0]) / float(self.nPoints)
-            Vstart              = self.VoltageX[0]
+            self.nPoints    = nPoints if (nPoints >= self.nPointsMin) else self.nPointsDef
+            Vstep           = (self.VoltageX[nPoints - 1] - self.VoltageX[0]) / float(self.nPoints)
+            Vstart          = self.VoltageX[0]
             if (Vstart > 0.0):
                 Vstart = 0.0
             # end if
@@ -813,10 +752,10 @@ class PhotovoltaicModelCore(object):
                      # end if
                 # end for
             # end if
-            self.Vstart         = Vstart
-            self.Vend           = Vend
-            self.VoltageY       = np.arange(Vstart, Vend + Vstep, Vstep)
-            self.CurrentY       = None
+            self.Vstart     = Vstart
+            self.Vend       = Vend
+            self.VoltageY   = np.arange(Vstart, Vend + Vstep, Vstep)
+            self.CurrentY   = None
 
             if (self.ISCX > 0.0) and (self.VOCX > 0.0) and (self.FFX > 0.0):
                 self.reportMessage = "Isc = %.4g A ; Voc = %.4g V ; FF = %.4g %% ; Pm = %.4g W" % (self.ISCX, self.VOCX, 100.0 * self.FFX, self.FFX * self.ISCX * self.VOCX)
@@ -828,11 +767,11 @@ class PhotovoltaicModelCore(object):
             # end if
 
             if TkFound:
-                self.datax[1]   = self.VoltageX
-                self.datay[1]   = self.CurrentX
+                self.datax[1] = self.VoltageX
+                self.datay[1] = self.CurrentX
             # end if
 
-            self.FileLoaded     = True
+            self.FileLoaded = True
             return True
 
         except Exception as excT:
@@ -878,15 +817,15 @@ class PhotovoltaicModelCore(object):
         Vp   = V - (self.Rs * I)
         Isc  = -self.Isc
         Iph  = Isc
-        Iph += (self.Is1 * (math.exp(self.Rs * Isc / (self.n1 * self.NS * self.VT)) - 1.0))
+        Iph += (self.Is1 * (math.exp(self.Rs * Isc / (self.n1 * self.Ncells * self.VT)) - 1.0))
         if self.Diode2:
-            Iph += (self.Is2 * (math.exp(self.Rs * Isc / (self.n2 * self.NS * self.VT)) - 1.0))
+            Iph += (self.Is2 * (math.exp(self.Rs * Isc / (self.n2 * self.Ncells * self.VT)) - 1.0))
         # end if
         Iph += ((self.Rs / self.Rp) * Isc)
         fI   = Iph
-        fI  += (self.Is1 * (math.exp(Vp / (self.n1 * self.NS * self.VT)) - 1.0))
+        fI  += (self.Is1 * (math.exp(Vp / (self.n1 * self.Ncells * self.VT)) - 1.0))
         if self.Diode2:
-            fI  += (self.Is2 * (math.exp(Vp / (self.n2 * self.NS * self.VT)) - 1.0))
+            fI  += (self.Is2 * (math.exp(Vp / (self.n2 * self.Ncells * self.VT)) - 1.0))
         # end if
         fI  += (Vp / self.Rp)
         fI  -= I
@@ -895,9 +834,9 @@ class PhotovoltaicModelCore(object):
 
     def calculateCurrent(self, V):
         fIZ  = -self.Isc
-        fIZ += (self.Is1 * (math.exp(V / (self.n1 * self.NS * self.VT)) - 1.0))
+        fIZ += (self.Is1 * (math.exp(V / (self.n1 * self.Ncells * self.VT)) - 1.0))
         if self.Diode2:
-            fIZ += (self.Is2 * (math.exp(V / (self.n2 * self.NS * self.VT)) - 1.0))
+            fIZ += (self.Is2 * (math.exp(V / (self.n2 * self.Ncells * self.VT)) - 1.0))
         # end if
         fIZ += (V / self.Rp)
         fI   = spo.fsolve(self.CurrentFunc, x0=fIZ, args=(V,))
@@ -935,50 +874,22 @@ class PhotovoltaicModelCore(object):
             # end if
             #
 
-            Vstep               = (self.Vend - self.Vstart) / float(self.nPoints)
-            self.VoltageY       = np.arange(self.Vstart, self.Vend + Vstep, Vstep)
+            Vstep = (self.Vend - self.Vstart) / float(self.nPoints)
+            self.VoltageY = np.arange(self.Vstart, self.Vend + Vstep, Vstep)
+            self.CurrentY = np.zeros(self.nPoints)
+            for ii in range(0, self.nPoints):
+                (aI, aIZ) = self.calculateCurrent(self.VoltageY[ii])
+                self.CurrentY[ii] = aI
+            #
 
-            self.VOCY           = 0.0
-            self.ISCY           = 0.0
-            self.VmY            = 0.0
-            self.ImY            = 0.0
-            self.FFY            = 0.0
-            aIprev              = None
-            aVprev              = None
-            aPm                 = 0.0
-            aVoltage            = np.copy(self.VoltageY)
-            self.VoltageY       = np.array([])
-            self.CurrentY       = np.array([])
-            countPV             = 0
-
-            for aV in aVoltage:
-                (aI, aIZ) = self.calculateCurrent(aV)
-                if (aI <= 0.0) and (aV >= 0.0):
-                    self.VoltageY   = np.append(self.VoltageY, aV)
-                    self.CurrentY   = np.append(self.CurrentY, aI)
-                    countPV += 1
-                # end if
-                if (aI < 0.0) and (aV > 0.0) and (math.fabs(aI * aV) > aPm):
-                    aPm             = math.fabs(aI * aV)
-                    self.VmY        = aV
-                    self.ImY        = aI
-                # end if
-                if (aIprev is not None) and (aI >= 0.0) and (aIprev <= 0.0):
-                    self.VOCY   = aV
-                # end if
-                if (aVprev is not None) and (aV >= 0.0) and (aVprev <= 0.0):
-                    self.ISCY   = aI
-                # end if
-                if (aI > 0.0):
-                    if (aIprev is not None) and (aIprev <= 0.0):
-                        self.VoltageY   = np.append(self.VoltageY, aV)
-                        self.CurrentY   = np.append(self.CurrentY, aI)
-                        countPV += 1
-                    # end if
-                    break
-                # end if
-                aVprev = aV
-                aIprev = aI
+            (aVoltage, aCurrent, VOC, ISC, Vm, Im, FF, countPV, nQindex) = self.checkQuadrant(self.VoltageY, self.CurrentY)
+            self.VoltageY           = aVoltage
+            self.CurrentY           = aCurrent
+            self.VOCY               = VOC
+            self.ISCY               = ISC
+            self.VmY                = Vm
+            self.ImY                = Im
+            self.FFY                = FF
             # end for
 
             if (countPV < self.nPointsMin) and (math.fabs(self.VOCY) > 0.0) and (math.fabs(self.ISCY) > 0.0):
@@ -987,12 +898,12 @@ class PhotovoltaicModelCore(object):
                 self.VoltageY = np.arange(0.0, self.VOCY + Vstep, Vstep)
                 self.CurrentY = np.array([])
                 for aV in self.VoltageY:
-                    (aI, aIZ)  = self.calculateCurrent(aV)
-                    self.CurrentY   = np.append(self.CurrentY, aI)
+                    (aI, aIZ) = self.calculateCurrent(aV)
+                    self.CurrentY = np.append(self.CurrentY, aI)
                     if (aI < 0.0) and (aV > 0.0) and (math.fabs(aI * aV) > aPm):
-                        aPm             = math.fabs(aI * aV)
-                        self.VmY        = aV
-                        self.ImY        = aI
+                        aPm = math.fabs(aI * aV)
+                        self.VmY = aV
+                        self.ImY = aI
                     # end if
                 # end for
             # end if
@@ -1106,7 +1017,7 @@ class PhotovoltaicModelCore(object):
             self.Rp             = self.getFloatValue(self.RpEdit,       self.Rp,        1e-3,   1e9,    "%.3g")
 
             # Number of solar cells in series
-            self.NS             = self.getFloatValue(self.NSEdit,       self.NS,        1,      1000,   "%d")
+            self.Ncells         = self.getFloatValue(self.NcellsEdit,   self.Ncells,    1,      1000,   "%d")
 
             self.Vstart         = self.getFloatValue(self.VstartEdit,   self.Vstart,    0.0,    1000.0, "%g")
             self.Vend           = self.getFloatValue(self.VendEdit,     self.Vend,      0.0,    1000.0, "%g")
@@ -1300,14 +1211,92 @@ class PhotovoltaicModelCore(object):
 
     # end run
 
-    def setFocus(self):
-        if (not TkFound) or (not self.root):
-            return
+    # Check and convert the I-V quadrant to Q4
+    def checkQuadrant(self, aVoltage, aCurrent):
+
+        nPoints = len(aVoltage)
+
+        # V > 0 and I > 0: to convert to Q4
+        # V < 0 and I > 0: to convert to Q4
+        # V < 0 and I < 0: to convert to Q4
+        # V > 0 and I < 0: the used quadrant
+        nQ  = [0, 0, 0, 0]
+        for aV, aI in zip(aVoltage, aCurrent):
+            if      (aI > 0.0) and (aV > 0.0):
+                nQ[0] += 1
+            elif    (aI > 0.0) and (aV < 0.0):
+                nQ[1] += 1
+            elif    (aI < 0.0) and (aV < 0.0):
+                nQ[2] += 1
+            elif    (aI < 0.0) and (aV > 0.0):
+                nQ[3] += 1
+            # end if
+        # end for
+        nQmax   = max(nQ)
+        nQindex = nQ.index(nQmax) + 1
+        if (nQmax < (nPoints / 2)):
+            raise Exception('! invalid voltage/current data: no photovoltaic quadrant identified')
         # end if
-        self.root.attributes('-topmost', 1)
-        self.root.attributes('-topmost', 0)
-        self.root.after(10, lambda: self.root.focus_force())
-    # end setFocus
+
+        aVQ             = np.copy(aVoltage)
+        aIQ             = np.copy(aCurrent)
+        aVoltage        = np.array([])
+        aCurrent        = np.array([])
+        aIprev          = None
+        aVprev          = None
+        aPm             = 0.
+        VOC             = aVQ[nPoints - 1]
+        ISC             = aIQ[0]
+        Vm              = 0.0
+        Im              = 0.0
+        FF              = 0.0
+        countPV         = 0
+
+        # keep only the photovoltaic part of the current-voltage characteristic
+        # and convert to the fourth quadrant (V > 0 and I < 0) if necessary
+
+        ii = 0
+        for aV, aI in zip(aVQ, aIQ):
+
+            if (nQindex != 4):
+                # always use the solar cell current-voltage characteristic in the fourth quadrant 4 (V > 0 and I < 0)
+                if      (nQindex == 1):
+                    aI  = -aI
+                elif    (nQindex == 2):
+                    aI  = -aI
+                    aV  = -aV
+                elif    (nQindex == 3):
+                    aV  = -aV
+                # end if
+                aVQ[ii] = aV
+                aIQ[ii] = aI
+            # end if
+
+            if (aIprev is not None) and (aI >= 0.0) and (aIprev <= 0.0):
+                VOC = aV
+            # end if
+            if (aVprev is not None) and (aV >= 0.0) and (aVprev <= 0.0):
+                ISC = aI
+            # end if
+            if (aI <= 0.0) and (aV >= 0.0):
+                countPV += 1
+                aVoltage = np.append(aVoltage, aV)
+                aCurrent = np.append(aCurrent, aI)
+            # end if
+            if (aI < 0.0) and (aV > 0.0) and (math.fabs(aI * aV) > aPm):
+                aPm = math.fabs(aI * aV)
+                Vm = aV
+                Im = aI
+            # end if
+            aVprev = aV
+            aIprev = aI
+            ii    += 1
+
+        # end for
+
+        FF = (Vm * Im) / (VOC * ISC)
+        return (aVoltage, aCurrent, VOC, ISC, Vm, Im, FF, countPV, nQindex)
+    #
 
     # plot the current-voltage characteristic
     def updatePlot(self):
@@ -1326,39 +1315,47 @@ class PhotovoltaicModelCore(object):
                     self.line[idc].set_color(self.linecolor[idc])
                 # end for
 
-                self.scatter[0], = self.plot[0].plot(np.array([]),      np.array([]),   'go', zorder=4, label=None)
+                self.scatter[0], = self.plot[0].plot(np.array([]), np.array([]), 'go', zorder=4, label=None)
                 self.scatter[0].set_markerfacecolor('g')
                 self.scatter[0].set_markeredgecolor('g')
                 self.scatter[0].set_markersize(7)
 
-                self.line0a = self.plot[0].axhline(y=0,                 xmin=0, xmax=1, linewidth=2, color='k')
-                self.line0b = self.plot[0].axvline(x=0,                 ymin=0, ymax=1, linewidth=2, color='k')
+                self.line0a = self.plot[0].axhline(y=0, xmin=0, xmax=1, linewidth=2, color='k')
+                self.line0b = self.plot[0].axvline(x=0, ymin=0, ymax=1, linewidth=2, color='k')
 
                 for idp in range(0, self.plotcount):
                     self.plot[idp].get_xaxis().set_visible(True)
                     self.plot[idp].get_yaxis().set_visible(True)
                 # end for
 
-                self.plot[0].legend(numpoints=1, fontsize='small', loc='upper center')
+                self.plot[0].legend(numpoints=1, loc='best')
+                self.plot[0].grid()
 
                 afont = FontProperties()
                 tfont = afont.copy()
                 tfont.set_style('normal')
                 tfont.set_weight('bold')
                 tfont.set_size('small')
-                self.report = self.plot[0].text(0.5, 1.05, ' ', color='red', horizontalalignment='center', verticalalignment='center', fontproperties=tfont, transform = self.plot[0].transAxes)
+                self.report = self.plot[0].text(0.5, 1.05, ' ', color='red', horizontalalignment='center', verticalalignment='center', fontsize=self.fontsize, transform = self.plot[0].transAxes)
 
                 self.PlotInitialized = True
 
             # end if
 
+            GeneratorConvention = self.GeneratorConventionVar.get()
+
             for idc in range(0, self.curvecount):
+                if (self.datax[idc] is not None):
+                    datay = -self.datay[idc] if GeneratorConvention else self.datay[idc]
+                else:
+                    datay = None
+                # end if
                 self.line[idc].set_xdata(self.datax[idc] if (self.datax[idc] is not None) else np.array([]))
-                self.line[idc].set_ydata(self.datay[idc] if (self.datay[idc] is not None) else np.array([]))
+                self.line[idc].set_ydata(datay if (datay is not None) else np.array([]))
             # end for
 
             self.scatter[0].set_xdata(self.VmY)
-            self.scatter[0].set_ydata(self.ImY)
+            self.scatter[0].set_ydata(-self.ImY if GeneratorConvention else self.ImY)
 
             for idp in range(0, self.plotcount):
                 self.plot[idp].relim()
@@ -1370,7 +1367,6 @@ class PhotovoltaicModelCore(object):
                 self.report.set_text(self.reportMessage)
             # end if
 
-            self.setFocus()
             self.canvas.draw()
 
             if self.GUIstarted:
@@ -1390,8 +1386,8 @@ class PhotovoltaicModelCore(object):
                 self.RsEdit.insert (0, "%.4g" % self.Rs)
                 self.RpEdit.delete (0, Tk.END)
                 self.RpEdit.insert (0, "%.4g" % self.Rp)
-                self.NSEdit.delete (0, Tk.END)
-                self.NSEdit.insert (0, "%d" % self.NS)
+                self.NcellsEdit.delete (0, Tk.END)
+                self.NcellsEdit.insert (0, "%d" % self.Ncells)
                 self.VstartEdit.delete (0, Tk.END)
                 self.VstartEdit.insert (0, "%g" % self.Vstart)
                 self.VendEdit.delete (0, Tk.END)
@@ -1497,6 +1493,13 @@ class PhotovoltaicModelCore(object):
             pass
     # end onDiode2Opt
 
+    def onGeneratorConvention(self):
+        try:
+            self.updatePlot()
+        except:
+            pass
+    # end onGeneratorConvention
+
     def onStart(self):
         return self.start(Fit = False)
     # end onStart
@@ -1505,6 +1508,20 @@ class PhotovoltaicModelCore(object):
         return self.start(Fit = True)
     # end onFit
 
+    def saveFigure(self, figureFilename):
+        if not figureFilename:
+            return
+        #
+        global figure
+        Fname = os.path.splitext(figureFilename)[0]
+        fileToSavePNG = Fname + '.png'
+        fileToSavePDF = Fname + '.pdf'
+        figure.savefig(fileToSavePNG)
+        pdfT = PdfPages(fileToSavePDF)
+        pdfT.savefig(figure)
+        pdfT.close()
+    # end saveFigure
+
     def doSave(self, strFilename, savePDF = False):
 
         if (not strFilename) or self.isRunning():
@@ -1512,24 +1529,22 @@ class PhotovoltaicModelCore(object):
         # end if
 
         try:
-
+        
+            Fname = os.path.splitext(strFilename)[0]
             if savePDF and self.GUIstarted:
-                # save figure in PDF format
-                pdfT = PdfPages(strFilename)
+                fileToSavePNG = Fname + '.png'
+                fileToSavePDF = Fname + '.pdf'
+                self.figure.savefig(fileToSavePNG)
+                pdfT = PdfPages(fileToSavePDF)
                 pdfT.savefig(self.figure)
                 pdfT.close()
-                # and in PNG format
-                strPNG = os.path.splitext(strFilename)[0]
-                strPNG = strPNG + '.png'
-                pl.savefig(strPNG, dpi=600)
             # end if
 
             # save output data in text format
-            strF = os.path.splitext(strFilename)[0]
-            fileIV = strF + '_IV.txt'          # current-voltage characteristic
+            fileIV = Fname + '_IV.txt'          # current-voltage characteristic
             np.savetxt(fileIV, np.c_[self.VoltageY, self.CurrentY],
                 fmt='%.6f\t%.8g', delimiter=self.DataDelimiter, newline='\n',
-                header=("Current-voltage characteristic for:\n  ISC = %.4g A ; VOC = %.4g V ; FF = %.4g %% ; \n  Is1 = %.4g A ; n1 = %.4g ; Is2 = %.4g A ; n2 = %.4g ; \n  RS = %.4g Ohms ; RP = %.4g Ohms\n" % (self.ISCY, self.VOCY, 100.0 * self.FFY, self.Is1, self.n1, self.Is2, self.n2, self.Rs, self.Rp))
+                header=("Current-voltage characteristic for:\n  ISC = %.4g A ; VOC = %.4g V ; FF = %.4g %% ; \n  Is1 = %.4g A ; n1 = %.4g ; Is2 = %.4g A ; n2 = %.4g ; Ncells = %d\n  RS = %.4g Ohms ; RP = %.4g Ohms\n" % (self.ISCY, self.VOCY, 100.0 * self.FFY, self.Is1, self.n1, self.Is2, self.n2, self.Ncells, self.Rs, self.Rp))
                 )
 
         except Exception as excT:
@@ -1629,7 +1644,7 @@ class PhotovoltaicModelCore(object):
                              (self.name                                                         +
                               "\n"                                                              +
                               self.__version__                                                  +
-                              "\nCopyright(C) 2018-2019 Pr. Sidi OULD SAAD HAMADY \n"           +
+                              "\nCopyright(C) 2018-2022 Pr. Sidi OULD SAAD HAMADY \n"           +
                               "Université de Lorraine, France \n"                               +
                               "sidi.hamady@univ-lorraine.fr \n"                                 +
                               "https://github.com/sidihamady/Photovoltaic-Model \n"             +
