@@ -59,9 +59,7 @@ You can also execute [PhotovoltaicModel.py](PhotovoltaicModel.py) by double clic
 
 In the graphical interface, change the parameters you want and press 'Calculate'.  
 
-
 ![Photovoltaic Two-Diode Model](screenshot1.png)
-
 
 To fit experimental current-voltage characteristic, load the file and press 'Fit'.  
 The file format consists of two columns (voltage in V  and current in A) separated by tabulation:  
