@@ -385,7 +385,7 @@ class PhotovoltaicModelCore(object):
             self.root.withdraw()
             self.root.wm_title(self.name)
 
-            self.figure = matplotlib.figure.Figure(figsize=(10,8), dpi=100, facecolor='#FFFFFF', edgecolor = '#C2984F', linewidth = 1.0, frameon=True)
+            self.figure = matplotlib.figure.Figure(figsize=(10,8), dpi=100, facecolor='#FFFFFF', edgecolor = '#FFFFFF', linewidth = 1.0, frameon=True)
             self.figure.subplots_adjust(top = 0.90, bottom = 0.12, left = 0.12, right = 0.96, wspace = 0.25, hspace = 0.25)
 
             self.plot       = {}
