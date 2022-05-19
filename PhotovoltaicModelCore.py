@@ -23,7 +23,7 @@
 #
 #       from PhotovoltaicModelCore import *
 #
-#       PVM = PhotovoltaicModelCore(verbose = False)
+#       PVM = PhotovoltaicModelCore(verbose = False, useTkinterGUI = True)
 #
 #       PVM.calculate(
 #           Temperature             = 300.0,                        # Temperature in K
@@ -146,7 +146,7 @@ class CalculationThread(threading.Thread):
 class PhotovoltaicModelCore(object):
     """ the PhotovoltaicModel core class """
 
-    def __init__(self, verbose = True):
+    def __init__(self, verbose = True, useTkinterGUI = True):
         """ the PhotovoltaicModel class constructor """
 
         self.name               = "Photovoltaic Solar Cell Two-Diode Model"
@@ -236,6 +236,15 @@ class PhotovoltaicModelCore(object):
 
         self.reportMessage      = None
 
+        # useTkinterGUI: the program can be used in graphical (GUI) mode or command-line only mode. 
+        #   in command-line mode (useTkinterGUI = False) the results are printed out and saved in text files.
+        #   the command-line mode is useful to perform specific calculations or to inegrate in other simulations.
+        if useTkinterGUI and (not TkFound):
+            # if Tkinter is not found, just install or update python/numpy/scipy/matplotlib/tk modules
+            print(TkRet)
+        # end if
+        self.useTkinterGUI = useTkinterGUI if TkFound else False
+
         return
 
     # end __init__
@@ -257,11 +266,6 @@ class PhotovoltaicModelCore(object):
         Fit                     = False,
         OutputFilename          = './PhotovoltaicModelOutput'):
         """ the PhotovoltaicModel main function """
-
-        if not TkFound:
-            # if Tkinter is not found, just install or update python/numpy/scipy/matplotlib/tk modules
-            print(TkRet)
-        # end if
 
         # Temperature: in Kelvin (from 100 K to 500 K)
         self.Temperature    = Temperature   if ((Temperature >= 100.0)  and (Temperature <= 500.0))     else 300.0
@@ -316,7 +320,7 @@ class PhotovoltaicModelCore(object):
 
         Fit = False     # Fit the current-voltage characteristic contained in InputFilename
 
-        if TkFound:
+        if self.useTkinterGUI:
             # GUI mode: calculation done in a working thread
             self.startGUI(Fit = Fit)
         else:
@@ -366,7 +370,7 @@ class PhotovoltaicModelCore(object):
     # init the Tkinter GUI
     def startGUI(self, Fit = False):
 
-        if self.GUIstarted or (not TkFound):
+        if self.GUIstarted or (not self.useTkinterGUI):
             return
         # end if
 
@@ -384,6 +388,7 @@ class PhotovoltaicModelCore(object):
             self.root.bind_class("Entry","<Control-y>", self.onEntryRedo)
             self.root.withdraw()
             self.root.wm_title(self.name)
+            self.root.option_add('*Dialog.msg.font', 'Helvetica 11')
 
             self.figure = matplotlib.figure.Figure(figsize=(10,8), dpi=100, facecolor='#FFFFFF', edgecolor = '#FFFFFF', linewidth = 1.0, frameon=True)
             self.figure.subplots_adjust(top = 0.90, bottom = 0.12, left = 0.12, right = 0.96, wspace = 0.25, hspace = 0.25)
@@ -766,7 +771,7 @@ class PhotovoltaicModelCore(object):
                 print("\n" + self.reportMessage)
             # end if
 
-            if TkFound:
+            if self.useTkinterGUI:
                 self.datax[1] = self.VoltageX
                 self.datay[1] = self.CurrentX
             # end if
@@ -1035,8 +1040,10 @@ class PhotovoltaicModelCore(object):
             # end try
 
             # start calculations
-            self.actionbutton = self.btnFit if Fit else self.btnCalculate
-            self.actionbuttonText = "Fit" if Fit else "Calculate"
+            if self.useTkinterGUI:
+                self.actionbutton = self.btnFit if Fit else self.btnCalculate
+                self.actionbuttonText = "Fit" if Fit else "Calculate"
+            # end if
             self.setRunning(running = True)
             self.thread = CalculationThread(id=1, func=self.fit if Fit else self.run)
             self.threadfinish = self.updatePlot
@@ -1045,7 +1052,7 @@ class PhotovoltaicModelCore(object):
 
         else:
             # GUI initialization step
-            if TkFound:
+            if self.useTkinterGUI:
                 self.actionbutton = self.btnFit if Fit else self.btnCalculate
                 self.actionbuttonText = "Fit" if Fit else "Calculate"
                 self.setRunning(running = True)
@@ -1083,7 +1090,7 @@ class PhotovoltaicModelCore(object):
                 return False
             # endif
 
-            if TkFound:
+            if self.useTkinterGUI:
                 self.datax[0] = self.VoltageY
                 self.datay[0] = self.CurrentY
             # endif
@@ -1127,7 +1134,7 @@ class PhotovoltaicModelCore(object):
                 return False
             # end if
 
-            if TkFound:
+            if self.useTkinterGUI:
                 self.datax[1] = self.VoltageX
                 self.datay[1] = self.CurrentX
             # end if
@@ -1172,7 +1179,7 @@ class PhotovoltaicModelCore(object):
                     return False
                 # endif
 
-                if TkFound:
+                if self.useTkinterGUI:
                     self.datax[0] = self.VoltageY
                     self.datay[0] = self.CurrentY
                 # endif
@@ -1301,7 +1308,7 @@ class PhotovoltaicModelCore(object):
     # plot the current-voltage characteristic
     def updatePlot(self):
 
-        if (not TkFound):
+        if (not self.useTkinterGUI):
             return
         # end if
 
@@ -1508,20 +1515,6 @@ class PhotovoltaicModelCore(object):
         return self.start(Fit = True)
     # end onFit
 
-    def saveFigure(self, figureFilename):
-        if not figureFilename:
-            return
-        #
-        global figure
-        Fname = os.path.splitext(figureFilename)[0]
-        fileToSavePNG = Fname + '.png'
-        fileToSavePDF = Fname + '.pdf'
-        figure.savefig(fileToSavePNG)
-        pdfT = PdfPages(fileToSavePDF)
-        pdfT.savefig(figure)
-        pdfT.close()
-    # end saveFigure
-
     def doSave(self, strFilename, savePDF = False):
 
         if (not strFilename) or self.isRunning():
@@ -1654,7 +1647,7 @@ class PhotovoltaicModelCore(object):
     # end onAbout
 
     def onPopmenu(self, event):
-        if (not TkFound):
+        if (not self.useTkinterGUI):
             return
         # end if
         try:

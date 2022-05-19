@@ -24,7 +24,10 @@
 # import the program core class in PhotovoltaicModelCore.py
 from PhotovoltaicModelCore import *
 
-PVM = PhotovoltaicModelCore(verbose = True)
+# set verbose to True to enable printing output
+# The program can be used in graphical (GUI) mode or command-line only mode. In command-line mode (useTkinterGUI = False) the results are printed out and saved in text files.
+#   the command-line mode is useful to perform specific calculations or to inegrate in other simulations.
+PVM = PhotovoltaicModelCore(verbose = True, useTkinterGUI = True)
 
 PVM.calculate(
     Temperature             = 300.0,                        # Temperature in K
@@ -47,6 +50,6 @@ PVM.calculate(
                                                             #   0.55	-1.5e-8
     Fit                     = False,                        # Fit the current-voltage characteristic contained in InputFilename
     OutputFilename          = './PhotovoltaicModelOutput'   # Output file name without extension
-                                                            #   (used to save figure in PDF format if in GUI mode, and the text output data).
+                                                            #   (used to save figure in PDF format if in Tkinter GUI mode, and the text output data).
                                                             #   set to None to disable.
     )
