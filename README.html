@@ -4,7 +4,7 @@
 
 <h1 id="photovoltaic-solar-cell-two-diode-model">Photovoltaic Solar Cell Two-Diode Model</h1>
 
-<p>Code written by:<br />Pr. Sidi Hamady<br />
+<p>Code written by:<br />Prof. Sidi HAMADY<br />
 Université de Lorraine, France<br />
 sidi.hamady@univ-lorraine.fr</p>
 <p>See Copyright Notice in COPYRIGHT</p>
@@ -35,17 +35,20 @@ unzip and use.</p>
 <li>scipy version 0.13.1 or later</li>
 <li>matplotlib version 1.3.x or later</li>
 <li>tkinter 8.5 or later</li>
+<li>setuptools</li>
 </ul>
 <p>PS: for Windows, you can download a complete Python distribution from <a href="https://www.anaconda.com/distribution/">https://www.anaconda.com/distribution/</a></p>
+or the vanilla Python (<a href="https://www.python.org/downloads/windows/">https://www.python.org/downloads/windows/</a>) and install all required modules: 
+<p>python -m pip install -U matplotlib numpy scipy setuptools</p>
 
 <h2 id="howto">HowTo</h2>
 
 <p>Start <a href="PhotovoltaicModel.py">PhotovoltaicModel.py</a> interface:  </p>
 <p>from the command line prompt:<br />under Linux:</p>
-<pre><code><span class="hljs-keyword">cd</span> /path/<span class="hljs-keyword">to</span>/PhotovoltaicModel/  
+<pre><code><span class="hljs-keyword">cd</span> /path/<span class="hljs-keyword">to</span>/PhotovoltaicModel/
 <span class="hljs-keyword">python</span> -<span class="hljs-keyword">u</span> PhotovoltaicModel.<span class="hljs-keyword">py</span>
 </code></pre><p>under Windows (in the command prompt):</p>
-<pre><code><span class="hljs-keyword">cd</span> C:\path\<span class="hljs-keyword">to</span>\PhotovoltaicModel\  
+<pre><code><span class="hljs-keyword">cd</span> C:\path\<span class="hljs-keyword">to</span>\PhotovoltaicModel\
 <span class="hljs-keyword">python</span>.<span class="hljs-keyword">exe</span> -<span class="hljs-keyword">u</span> PhotovoltaicModel.<span class="hljs-keyword">py</span>
 </code></pre><p>You have to add python to your PATH.  </p>
 
@@ -62,7 +65,7 @@ The file format consists of two columns (voltage in V  and current in A) separat
 ...<br />
 0.55    -1.5e-8
 <br />The first two lines and lines beginning with a hash are ignored.
-<br />Of course, the fitting algorithm converges faster if provided with good initial guess for the parameters.  
+<br />Of course, the fitting algorithm converges faster if provided with good initial guess for the parameters.
 <br />You can restart fitting as many times as necessary to reach the desired accuracy.</p>
 
 </body>
